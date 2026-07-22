@@ -31,8 +31,14 @@ const SLIDE_H =
 
 /**
  * Feed = Instagram Explore:
- * 1) Gallery of previews (What India is seeing) - issue chips + submit CTA
- * 2) Tap a clip → vertical reels player (id= in URL)
+ * 1) Gallery of previews (What India is seeing) — issue chips + submit CTA
+ * 2) Tap a clip → vertical reels player (id= in URL); back restores gallery
+ *
+ * Playback strategy (no black flashes):
+ * - Poster stays visible until the active embed reports ready
+ * - YouTube: one nocookie iframe, autoplay + mute; tear down when off-slide
+ * - Instagram: keep poster; fade embed in carefully after load
+ * - X: poster card + open original (embeds are hostile)
  */
 export default function Feed() {
   const [params, setParams] = useSearchParams();
@@ -53,7 +59,8 @@ export default function Feed() {
   const [loading, setLoading] = useState(true);
   const [muted, setMuted] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [ready, setReady] = useState<Record<string, boolean>>({});
+  /** Only the currently mounted active embed may flip this. */
+  const [playReady, setPlayReady] = useState(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLElement | null)[]>([]);
   const ytIframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -67,6 +74,7 @@ export default function Feed() {
     const next = new URLSearchParams(params);
     next.delete('id');
     setParams(next, { replace: true });
+    setPlayReady(false);
   }, [params, setParams]);
 
   const openPlayer = useCallback(
@@ -74,16 +82,17 @@ export default function Feed() {
       const next = new URLSearchParams(params);
       next.set('id', id);
       setParams(next);
+      setPlayReady(false);
     },
     [params, setParams]
   );
 
-  // Load gallery list from filters only - changing watch id must not refetch.
+  // Load gallery list from filters only — changing watch id must not refetch.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      setReady({});
+      setPlayReady(false);
       const list = await loadEvidence({ issue, state, limit: 80 });
       if (cancelled) return;
       let next = list;
@@ -150,6 +159,14 @@ export default function Feed() {
     };
   }, [session, items]);
 
+  // New active slide → poster until that embed loads (prevents black flash).
+  // Depend on `active` only — updating `id` in the URL after intersection must
+  // not clear playReady after onLoad (that left the poster stuck forever).
+  useEffect(() => {
+    if (!watching) return;
+    setPlayReady(false);
+  }, [active, watching]);
+
   useEffect(() => {
     if (!watching || loading || items.length === 0) return;
     const id = requestAnimationFrame(() => {
@@ -206,7 +223,7 @@ export default function Feed() {
     } catch {
       /* ignore */
     }
-  }, [muted, active, watching]);
+  }, [muted, active, watching, playReady]);
 
   useEffect(() => {
     if (!watching) return;
@@ -247,6 +264,7 @@ export default function Feed() {
       if (issue) next.set('issue', issue);
       if (value) next.set('state', value);
     }
+    if (standParam) next.set('stand', standParam);
     setParams(next, { replace: true });
   };
 
@@ -307,45 +325,47 @@ export default function Feed() {
             {t('feed.submitEvidence')}
           </Link>
         </div>
-        <p className="text-xs text-sub">{t('feed.submitHint')}</p>
+        <p className="text-xs text-sub leading-relaxed">{t('feed.submitHint')}</p>
 
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-          <button
-            type="button"
-            className={`shrink-0 rounded-full px-3.5 py-2 text-sm font-semibold border min-h-10 ${
-              !issue ? 'bg-navy text-white border-navy' : 'bg-white text-sub border-line'
-            }`}
-            onClick={() => setFilter('issue', '')}
-          >
-            {t('feed.allIssues')}
-          </button>
-          {ISSUES.map((i) => (
+        {/* Sticky chips + state — single compact bar so filters never blow the grid */}
+        <div className="sticky top-16 z-30 -mx-4 px-4 py-2.5 space-y-2.5 bg-bg/95 backdrop-blur border-b border-line/70">
+          <div className="flex gap-2 overflow-x-auto pb-0.5 -mx-0.5 px-0.5">
             <button
-              key={i.slug}
               type="button"
               className={`shrink-0 rounded-full px-3.5 py-2 text-sm font-semibold border min-h-10 ${
-                issue === i.slug ? 'bg-navy text-white border-navy' : 'bg-white text-sub border-line'
+                !issue ? 'bg-navy text-white border-navy' : 'bg-white text-sub border-line'
               }`}
-              onClick={() => setFilter('issue', i.slug)}
+              onClick={() => setFilter('issue', '')}
             >
-              {issueLabel(i.slug, lang)}
+              {t('feed.allIssues')}
             </button>
-          ))}
+            {ISSUES.map((i) => (
+              <button
+                key={i.slug}
+                type="button"
+                className={`shrink-0 rounded-full px-3.5 py-2 text-sm font-semibold border min-h-10 ${
+                  issue === i.slug ? 'bg-navy text-white border-navy' : 'bg-white text-sub border-line'
+                }`}
+                onClick={() => setFilter('issue', i.slug)}
+              >
+                {issueLabel(i.slug, lang)}
+              </button>
+            ))}
+          </div>
+          <select
+            value={state ?? ''}
+            onChange={(e) => setFilter('state', e.target.value)}
+            className="w-full max-w-md rounded-xl border border-line bg-white px-3 py-2.5 text-sm"
+            aria-label={t('feed.allStates')}
+          >
+            <option value="">{t('feed.allStates')}</option>
+            {STATES.map((s) => (
+              <option key={s.code} value={s.code}>
+                {stateName(s.code, lang)}
+              </option>
+            ))}
+          </select>
         </div>
-
-        <select
-          value={state ?? ''}
-          onChange={(e) => setFilter('state', e.target.value)}
-          className="w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm"
-          aria-label={t('feed.allStates')}
-        >
-          <option value="">{t('feed.allStates')}</option>
-          {STATES.map((s) => (
-            <option key={s.code} value={s.code}>
-              {stateName(s.code, lang)}
-            </option>
-          ))}
-        </select>
 
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
@@ -359,10 +379,11 @@ export default function Feed() {
             <Link to="/add" className="inline-flex btn-primary text-sm">
               {t('feed.submitEvidence')}
             </Link>
+            <p className="text-xs text-sub">{t('feed.submitHint')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-            {items.map((item) => {
+            {items.map((item, i) => {
               const label = item.title?.trim() || issueLabel(item.issue, lang);
               return (
                 <button
@@ -371,8 +392,8 @@ export default function Feed() {
                   onClick={() => openPlayer(item.id)}
                   className="group relative rounded-2xl overflow-hidden border border-line text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-saffron"
                 >
-                  <EvidenceThumb item={item} className="aspect-[9/16]">
-                    <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                  <EvidenceThumb item={item} eager={i < 6} className="aspect-[9/16]">
+                    <span className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
                     <span className="absolute bottom-2 left-2 right-2 space-y-0.5">
                       <span className="block text-[10px] font-mono uppercase tracking-wide text-saffron">
                         {PLATFORM_LABEL[item.platform]}
@@ -381,7 +402,7 @@ export default function Feed() {
                         {label}
                       </span>
                     </span>
-                    <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/25">
+                    <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition bg-black/25">
                       <span className="rounded-full bg-saffron text-navy text-xs font-bold px-3 py-1.5">
                         {t('feed.play')}
                       </span>
@@ -417,7 +438,7 @@ export default function Feed() {
   }
 
   return (
-    <div className={`relative ${SLIDE_H} bg-black text-white overflow-hidden`}>
+    <div className={`relative ${SLIDE_H} bg-navyDeep text-white overflow-hidden`}>
       <header className="absolute top-0 inset-x-0 z-50 flex items-center gap-2 px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 bg-gradient-to-b from-black/80 to-transparent">
         <button
           type="button"
@@ -469,10 +490,10 @@ export default function Feed() {
           const my = mine[item.id];
           const yid = item.platform === 'youtube' ? youtubeIdFromUrl(item.url) : null;
           const igPath = item.platform === 'instagram' ? igEmbedPath(item.url) : null;
-          const embedReady = !!ready[item.id];
           const stand: Stand | null = standForIssue(item.issue);
           const stood = !!(stand && joined.has(stand.id));
-          const hidePoster = isActive && embedReady && !!yid;
+          // Only YouTube fully replaces the poster once play is ready.
+          const hidePoster = isActive && playReady && !!yid;
 
           return (
             <section
@@ -487,42 +508,75 @@ export default function Feed() {
                 item={item}
                 eager={near}
                 className={`absolute inset-0 transition-opacity duration-300 ${
-                  hidePoster ? 'opacity-0' : 'opacity-100'
+                  hidePoster ? 'opacity-0 pointer-events-none' : 'opacity-100'
                 }`}
               />
 
-              {near && yid && (
+              {/* YouTube: one active iframe; always start muted for autoplay, unmute via JS API */}
+              {isActive && yid && (
                 <iframe
-                  ref={isActive ? ytIframeRef : undefined}
-                  className={`absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-200 ${
-                    isActive && embedReady ? 'opacity-100' : 'opacity-0'
+                  key={`yt-${item.id}`}
+                  ref={ytIframeRef}
+                  className={`absolute inset-0 w-full h-full border-0 pointer-events-none transition-opacity duration-200 ${
+                    playReady ? 'opacity-100' : 'opacity-0'
                   }`}
-                  src={
-                    isActive
-                      ? `https://www.youtube-nocookie.com/embed/${yid}?autoplay=1&rel=0&playsinline=1&modestbranding=1&mute=${muted ? 1 : 0}&enablejsapi=1&controls=0`
-                      : `https://www.youtube-nocookie.com/embed/${yid}?autoplay=0&rel=0&playsinline=1&modestbranding=1&mute=1&enablejsapi=1&controls=0`
-                  }
+                  src={`https://www.youtube-nocookie.com/embed/${yid}?autoplay=1&rel=0&playsinline=1&modestbranding=1&mute=1&enablejsapi=1&controls=0`}
                   title={item.title ?? 'YouTube'}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture"
                   onLoad={() => {
-                    if (isActive) setReady((r) => ({ ...r, [item.id]: true }));
+                    setPlayReady(true);
+                    if (!muted) {
+                      try {
+                        ytIframeRef.current?.contentWindow?.postMessage(
+                          JSON.stringify({ event: 'command', func: 'unMute', args: [] }),
+                          '*'
+                        );
+                      } catch {
+                        /* ignore */
+                      }
+                    }
                   }}
                 />
               )}
 
+              {/* Instagram: keep poster; fade embed only after load (often letterboxed) */}
               {isActive && igPath && (
                 <iframe
-                  className="absolute inset-0 w-full h-full bg-transparent pointer-events-none opacity-90"
+                  key={`ig-${item.id}`}
+                  className={`absolute inset-0 w-full h-full border-0 bg-transparent pointer-events-none transition-opacity duration-500 ${
+                    playReady ? 'opacity-95' : 'opacity-0'
+                  }`}
                   src={`https://www.instagram.com/${igPath}/embed/captioned/`}
                   title={item.title ?? 'Instagram'}
+                  onLoad={() => setPlayReady(true)}
                 />
               )}
 
+              {/* X: card over poster — open original */}
               {isActive && item.platform === 'x' && (
                 <div className="relative z-10 max-w-md mx-auto px-6 text-center space-y-4 pointer-events-auto">
-                  <p className="text-lg leading-snug">{item.title}</p>
-                  <a href={item.url} target="_blank" rel="noreferrer noopener" className="inline-flex btn-secondary text-sm">
+                  <p className="text-lg leading-snug drop-shadow-md">{item.title}</p>
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="inline-flex btn-secondary text-sm"
+                  >
                     {t('evidence.openOriginal')}
+                  </a>
+                </div>
+              )}
+
+              {/* IG / non-YT fallback: open original while embed settles */}
+              {isActive && igPath && !playReady && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="pointer-events-auto rounded-full bg-saffron text-navy text-sm font-bold px-4 py-2.5 shadow-lift"
+                  >
+                    {t('feed.openOn')} {PLATFORM_LABEL.instagram}
                   </a>
                 </div>
               )}

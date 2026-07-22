@@ -22,8 +22,12 @@ describe('phase7 geography + public counts', () => {
     expect(sql).toMatch(/feed_reaction_counts with \(security_invoker = false\)/);
   });
 
-  it('loadEvidence includes national scope for state tiles', () => {
-    expect(read('src/state/useEvidence.ts')).toMatch(/scope\.eq\.national/);
+  it('loadEvidence includes national scope for state tiles (not other states)', () => {
+    const src = read('src/state/useEvidence.ts');
+    expect(src).toMatch(/scope\.eq\.national/);
+    expect(src).toMatch(/evidenceMatchesState/);
+    // Must not refill empty state tiles with every approved clip.
+    expect(src).not.toMatch(/tiles never look empty|look broken/);
   });
 
   it('Auth uses PKCE and origin redirectTo', () => {
@@ -43,9 +47,11 @@ describe('phase7 geography + public counts', () => {
   it('Feed reels keep poster until iframe onLoad', () => {
     const src = read('src/pages/Feed.tsx');
     expect(src).toMatch(/onLoad/);
-    expect(src).toMatch(/embedReady|ready\[/);
+    expect(src).toMatch(/playReady|embedReady|ready\[/);
     expect(src).toMatch(/openPlayer|watching/);
     expect(src).toMatch(/grid-cols-2/);
+    expect(src).toMatch(/youtube-nocookie\.com\/embed/);
+    expect(src).toMatch(/backToGallery|closePlayer/);
   });
 
   it('language picker portals and LangProvider lazy-inits from storage/browser', () => {
