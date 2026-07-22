@@ -1,10 +1,18 @@
-// Canvas rendering for the shareable proof card and the citizen card.
-// Cards are 1080×1350 (4:5 — ideal for WhatsApp/Instagram) and drawn
-// entirely client-side; nothing is uploaded anywhere.
+// Canvas rendering for the BharatBol proof card and citizen card.
+// Two formats: 'portrait' 1080×1350 (4:5, feed) and 'story' 1080×1920
+// (9:16, Instagram/WhatsApp status). Drawn entirely client-side;
+// nothing is uploaded anywhere.
 import { fmt } from './format';
+import { BRAND } from '../config/brand';
 
-const W = 1080;
-const H = 1350;
+export type CardFormat = 'portrait' | 'story';
+
+const DIMS: Record<CardFormat, { w: number; h: number }> = {
+  portrait: { w: 1080, h: 1350 },
+  story: { w: 1080, h: 1920 },
+};
+
+const HONEST_LINE = 'Verified engaged citizens · not a census · not an election';
 
 function drawChakra(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, color: string, width = 3) {
   ctx.save();
@@ -45,27 +53,27 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
   return lines;
 }
 
-function base(ctx: CanvasRenderingContext2D) {
-  const g = ctx.createLinearGradient(0, 0, 0, H);
+function base(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  const g = ctx.createLinearGradient(0, 0, 0, h);
   g.addColorStop(0, '#0F2347');
   g.addColorStop(1, '#15305E');
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillRect(0, 0, w, h);
 
   // Faint chakra watermark, bottom right.
   ctx.save();
   ctx.globalAlpha = 0.08;
-  drawChakra(ctx, W - 140, H - 160, 260, '#FFFFFF', 5);
+  drawChakra(ctx, w - 140, h - 160, 260, '#FFFFFF', 5);
   ctx.restore();
 
   // Header: mark + dual-weight wordmark (Bharat regular, Bol bold).
   drawChakra(ctx, 108, 112, 40, '#FFFFFF', 4);
   ctx.fillStyle = '#FFFFFF';
   ctx.font = '500 52px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('Bharat', 176, 130);
-  const bharatW = ctx.measureText('Bharat').width;
+  ctx.fillText(BRAND.wordmark.regular, 176, 130);
+  const regularW = ctx.measureText(BRAND.wordmark.regular).width;
   ctx.font = '800 52px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('Bol', 176 + bharatW + 6, 130);
+  ctx.fillText(BRAND.wordmark.bold, 176 + regularW + 6, 130);
 
   // Restrained tricolour rule under the header.
   const y = 176;
@@ -77,33 +85,45 @@ function base(ctx: CanvasRenderingContext2D) {
   ctx.fillRect(260, y, 90, 6);
 }
 
-function footer(ctx: CanvasRenderingContext2D, url: string, tagline: string, disclaimer: string) {
+function footer(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  url: string,
+  hashtags: string
+) {
+  ctx.fillStyle = '#E2892C';
+  ctx.font = '700 40px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText(hashtags, 72, h - 208);
+
   ctx.fillStyle = 'rgba(255,255,255,0.92)';
   ctx.font = '600 40px "Plus Jakarta Sans", sans-serif';
   let shown = url.replace(/^https?:\/\//, '');
-  const maxW = W - 144;
+  const maxW = w - 144;
   if (ctx.measureText(shown).width > maxW) {
     // Long stand URLs: fall back to the bare domain, ellipsized if needed.
     shown = shown.split('/')[0];
     while (shown.length > 3 && ctx.measureText(`${shown}…`).width > maxW) shown = shown.slice(0, -1);
     if (ctx.measureText(shown).width > maxW) shown = `${shown}…`;
   }
-  ctx.fillText(shown, 72, H - 150);
+  ctx.fillText(shown, 72, h - 150);
+
   ctx.fillStyle = 'rgba(255,255,255,0.65)';
   ctx.font = '500 34px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText(tagline, 72, H - 96);
+  ctx.fillText(`${BRAND.name} — where Bharat speaks.`, 72, h - 96);
   ctx.font = '400 24px "Plus Jakarta Sans", sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.45)';
-  ctx.fillText(disclaimer, 72, H - 48);
+  ctx.fillText(HONEST_LINE, 72, h - 48);
 }
 
 async function loadFonts() {
   try {
     await Promise.all([
       document.fonts.load('600 84px Fraunces'),
-      document.fonts.load('700 130px Fraunces'),
+      document.fonts.load('700 148px Fraunces'),
       document.fonts.load('500 44px "IBM Plex Mono"'),
       document.fonts.load('600 40px "Plus Jakarta Sans"'),
+      document.fonts.load('800 52px "Plus Jakarta Sans"'),
     ]);
   } catch {
     // Fall back to system fonts; the card still renders.
@@ -114,43 +134,59 @@ export async function drawProofCard(opts: {
   count: number;
   title: string;
   url: string;
+  hashtags?: string;
+  format?: CardFormat;
 }): Promise<HTMLCanvasElement> {
   await loadFonts();
+  const { w, h } = DIMS[opts.format ?? 'portrait'];
   const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
+  canvas.width = w;
+  canvas.height = h;
   const ctx = canvas.getContext('2d')!;
-  base(ctx);
+  base(ctx, w, h);
 
-  let y = 360;
+  // Story format gets extra breathing room at the top.
+  let y = opts.format === 'story' ? 480 : 340;
+
+  // The hook: मैंने बोला। / I spoke.
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '700 110px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('मैंने बोला।', 72, y);
+  y += 90;
+  ctx.fillStyle = '#E2892C';
+  ctx.font = '600 64px Fraunces, serif';
+  ctx.fillText('I spoke.', 72, y);
+
+  y += opts.format === 'story' ? 140 : 110;
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
-  ctx.font = '500 46px Fraunces, serif';
-  ctx.fillText('I am one of', 72, y);
+  ctx.font = '500 44px Fraunces, serif';
+  ctx.fillText(`I'm 1 of`, 72, y);
 
-  y += 150;
+  y += 140;
   ctx.fillStyle = '#FFFFFF';
   ctx.font = '700 148px Fraunces, serif';
   ctx.fillText(fmt(opts.count), 72, y);
 
-  y += 88;
+  y += 84;
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
-  ctx.font = '500 46px Fraunces, serif';
-  ctx.fillText('citizens standing for', 72, y);
+  ctx.font = '500 44px Fraunces, serif';
+  ctx.fillText('who said this matters:', 72, y);
 
-  y += 96;
+  y += 92;
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = '600 64px Fraunces, serif';
-  for (const line of wrapText(ctx, opts.title, W - 160).slice(0, 5)) {
+  ctx.font = '600 60px Fraunces, serif';
+  const maxTitleLines = opts.format === 'story' ? 6 : 4;
+  for (const line of wrapText(ctx, opts.title, w - 160).slice(0, maxTitleLines)) {
     ctx.fillText(line, 72, y);
-    y += 82;
+    y += 78;
   }
 
-  y += 40;
+  y += 42;
   ctx.fillStyle = '#E2892C';
-  ctx.font = '600 44px Fraunces, serif';
-  ctx.fillText('Where do you stand?', 72, y);
+  ctx.font = '600 46px Fraunces, serif';
+  ctx.fillText('Bharat, bol. 👉', 72, y);
 
-  footer(ctx, opts.url, 'BharatBol — where Bharat speaks.', 'Independent · non-partisan · not an election');
+  footer(ctx, w, h, opts.url, opts.hashtags ?? BRAND.hashtag);
   return canvas;
 }
 
@@ -159,32 +195,41 @@ export async function drawCitizenCard(opts: {
   stateName: string;
   titles: string[];
   url: string;
+  hashtags?: string;
+  format?: CardFormat;
 }): Promise<HTMLCanvasElement> {
   await loadFonts();
+  const { w, h } = DIMS[opts.format ?? 'portrait'];
   const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
+  canvas.width = w;
+  canvas.height = h;
   const ctx = canvas.getContext('2d')!;
-  base(ctx);
+  base(ctx, w, h);
 
-  let y = 400;
+  let y = opts.format === 'story' ? 520 : 400;
+
+  // "{First name} ne bola." — the badge line.
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = '700 120px Fraunces, serif';
-  for (const line of wrapText(ctx, opts.firstName, W - 160).slice(0, 2)) {
+  ctx.font = '700 116px Fraunces, serif';
+  for (const line of wrapText(ctx, `${opts.firstName} ne bola.`, w - 160).slice(0, 2)) {
     ctx.fillText(line, 72, y);
-    y += 130;
+    y += 126;
   }
-
   ctx.fillStyle = '#E2892C';
   ctx.font = '500 54px Fraunces, serif';
-  ctx.fillText(`stands with India${opts.stateName ? ` · ${opts.stateName}` : ''}`, 72, y);
-  y += 110;
+  ctx.fillText(
+    `${opts.firstName} spoke${opts.stateName ? ` · ${opts.stateName}` : ''}`,
+    72,
+    y
+  );
+  y += 120;
 
   ctx.font = '600 44px "Plus Jakarta Sans", sans-serif';
-  for (const title of opts.titles.slice(0, 4)) {
+  const maxIssues = opts.format === 'story' ? 5 : 4;
+  for (const title of opts.titles.slice(0, maxIssues)) {
     drawChakra(ctx, 92, y - 14, 20, 'rgba(255,255,255,0.8)', 2);
     ctx.fillStyle = 'rgba(255,255,255,0.92)';
-    const lines = wrapText(ctx, title, W - 260).slice(0, 2);
+    const lines = wrapText(ctx, title, w - 260).slice(0, 2);
     for (const line of lines) {
       ctx.fillText(line, 140, y);
       y += 58;
@@ -192,7 +237,7 @@ export async function drawCitizenCard(opts: {
     y += 30;
   }
 
-  footer(ctx, opts.url, 'BharatBol — where Bharat speaks.', 'Independent · non-partisan · not an election');
+  footer(ctx, w, h, opts.url, opts.hashtags ?? BRAND.hashtag);
   return canvas;
 }
 
