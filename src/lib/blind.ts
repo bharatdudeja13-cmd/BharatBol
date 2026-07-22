@@ -22,6 +22,11 @@ export function ballotMessage(standId: string, tokenHex: string): Uint8Array {
   return te.encode(`bharatbol:ballot:v1:${standId}:${tokenHex}`);
 }
 
+/** Distinct from stand ballots — tokens are not interchangeable. */
+export function reactMessage(feedItemId: string, tokenHex: string): Uint8Array {
+  return te.encode(`bharatbol:feedreact:v1:${feedItemId}:${tokenHex}`);
+}
+
 export function randomTokenHex(): string {
   const b = new Uint8Array(32);
   crypto.getRandomValues(b);
@@ -31,6 +36,11 @@ export function randomTokenHex(): string {
 /** nullifier = sha256(message) — what the ballot store de-duplicates on. */
 export async function nullifierOf(standId: string, tokenHex: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', ballotMessage(standId, tokenHex));
+  return bytesToHex(new Uint8Array(digest));
+}
+
+export async function reactNullifierOf(feedItemId: string, tokenHex: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', reactMessage(feedItemId, tokenHex));
   return bytesToHex(new Uint8Array(digest));
 }
 
@@ -48,11 +58,32 @@ export async function blindForStand(publicKey: CryptoKey, standId: string): Prom
   return { stand_id: standId, token, blinded_b64: bytesToB64(blindedMsg), inv };
 }
 
+export type ReactBlindingSession = {
+  feed_item_id: string;
+  token: string;
+  blinded_b64: string;
+  inv: Uint8Array;
+};
+
+export async function blindForReact(publicKey: CryptoKey, feedItemId: string): Promise<ReactBlindingSession> {
+  const token = randomTokenHex();
+  const { blindedMsg, inv } = await suite().blind(publicKey, reactMessage(feedItemId, token));
+  return { feed_item_id: feedItemId, token, blinded_b64: bytesToB64(blindedMsg), inv };
+}
+
 export type Receipt = {
   stand_id: string;
   token: string;
   sig_b64: string;
   nullifier: string;
+};
+
+export type ReactReceipt = {
+  feed_item_id: string;
+  token: string;
+  sig_b64: string;
+  nullifier: string;
+  value?: 'up' | 'down';
 };
 
 /** Unblind the registrar's blind signature and verify it before trusting it. */
@@ -73,6 +104,23 @@ export async function finalizeReceipt(
   };
 }
 
+export async function finalizeReactReceipt(
+  publicKey: CryptoKey,
+  session: ReactBlindingSession,
+  blindSigB64: string
+): Promise<ReactReceipt> {
+  const msg = reactMessage(session.feed_item_id, session.token);
+  const sig = await suite().finalize(publicKey, msg, b64ToBytes(blindSigB64), session.inv);
+  const ok = await suite().verify(publicKey, sig, msg);
+  if (!ok) throw new Error('registrar signature failed verification');
+  return {
+    feed_item_id: session.feed_item_id,
+    token: session.token,
+    sig_b64: bytesToB64(sig),
+    nullifier: await reactNullifierOf(session.feed_item_id, session.token),
+  };
+}
+
 export async function importRegistrarPublicKey(jwk: JsonWebKey): Promise<CryptoKey> {
   return crypto.subtle.importKey('jwk', jwk, { name: 'RSA-PSS', hash: 'SHA-384' }, true, ['verify']);
 }
@@ -80,6 +128,7 @@ export async function importRegistrarPublicKey(jwk: JsonWebKey): Promise<CryptoK
 // ---- Receipt store (this device only) ----
 
 const STORE_KEY = 'bharatbol:receipts:v1';
+const REACT_STORE_KEY = 'bharatbol:react-receipts:v1';
 
 export function loadReceipts(): Receipt[] {
   try {
@@ -97,6 +146,24 @@ export function saveReceipt(r: Receipt): void {
 
 export function removeReceipt(standId: string): void {
   localStorage.setItem(STORE_KEY, JSON.stringify(loadReceipts().filter((x) => x.stand_id !== standId)));
+}
+
+export function loadReactReceipts(): ReactReceipt[] {
+  try {
+    return JSON.parse(localStorage.getItem(REACT_STORE_KEY) ?? '[]') as ReactReceipt[];
+  } catch {
+    return [];
+  }
+}
+
+export function saveReactReceipt(r: ReactReceipt): void {
+  const all = loadReactReceipts().filter((x) => x.feed_item_id !== r.feed_item_id);
+  all.push(r);
+  localStorage.setItem(REACT_STORE_KEY, JSON.stringify(all));
+}
+
+export function getReactReceipt(feedItemId: string): ReactReceipt | undefined {
+  return loadReactReceipts().find((x) => x.feed_item_id === feedItemId);
 }
 
 /** Export/import lets a citizen carry receipts to another device. */

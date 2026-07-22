@@ -20,6 +20,7 @@ import Feed from './pages/Feed';
 import AddToFeed from './pages/AddToFeed';
 import Moderation from './pages/Moderation';
 import Admin from './pages/Admin';
+import EvidencePlayer from './pages/EvidencePlayer';
 import { configError } from './lib/supabase';
 
 /** Deployed with no backend config: a clear failure, never silent demo data. */
@@ -44,9 +45,6 @@ function ConfigErrorScreen() {
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
-    // Block body on purpose: scrollTo returns a Promise in newer Chrome,
-    // and a concise arrow would hand that Promise to React as a cleanup
-    // function — crashing (blank page) on the first client-side navigation.
     window.scrollTo(0, 0);
   }, [pathname]);
   return null;
@@ -77,6 +75,37 @@ function JoinErrorToast() {
   );
 }
 
+function Shell() {
+  const { pathname } = useLocation();
+  const immersive = pathname.startsWith('/evidence');
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      {!immersive && <Header />}
+      <main className={immersive ? 'flex-1' : 'flex-1 pb-8'}>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/stands" element={<Stands />} />
+            <Route path="/stand/:id" element={<StandDetail />} />
+            <Route path="/me" element={<Me />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/data-rights" element={<DataRights />} />
+            <Route path="/verify" element={<Verify />} />
+            <Route path="/feed" element={<Feed />} />
+            <Route path="/add" element={<AddToFeed />} />
+            <Route path="/evidence" element={<EvidencePlayer />} />
+            <Route path="/moderation" element={<Moderation />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </ErrorBoundary>
+      </main>
+      {!immersive && <Footer />}
+    </div>
+  );
+}
+
 export default function App() {
   if (configError) return <ConfigErrorScreen />;
   return (
@@ -84,28 +113,7 @@ export default function App() {
       <AuthProvider>
         <StandsProvider>
           <ScrollToTop />
-          <div className="min-h-screen flex flex-col">
-            <Header />
-            <main className="flex-1 pb-8">
-              <ErrorBoundary>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/stands" element={<Stands />} />
-                <Route path="/stand/:id" element={<StandDetail />} />
-                <Route path="/me" element={<Me />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/data-rights" element={<DataRights />} />
-                <Route path="/verify" element={<Verify />} />
-                <Route path="/feed" element={<Feed />} />
-                <Route path="/add" element={<AddToFeed />} />
-                <Route path="/moderation" element={<Moderation />} />
-                <Route path="/admin" element={<Admin />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-              </ErrorBoundary>
-            </main>
-            <Footer />
-          </div>
+          <Shell />
           <ProfileGateModal />
           <ShareSheet />
           <JoinErrorToast />

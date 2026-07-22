@@ -134,7 +134,10 @@ export default function AddToFeed() {
           <p className="text-green font-semibold">
             {result === 'duplicate' ? t('add.duplicate') : t('add.done')}
           </p>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
+            <Link to="/evidence" className="btn-primary text-sm">
+              {t('evidence.watchAll')}
+            </Link>
             <Link to="/feed" className="btn-secondary text-sm">
               {t('feed.title')}
             </Link>

@@ -48,8 +48,8 @@ export default function Moderation() {
         <h1 className="font-display font-bold text-3xl text-navy">{t('policy.title')}</h1>
         <p className="mt-3 text-sub">
           {hi
-            ? 'हर पोस्ट किसी व्यक्ति द्वारा जाँचे जाने के बाद ही सार्वजनिक होता है। कुछ भी अपने आप प्रकाशित नहीं होता।'
-            : 'Every submission is reviewed by a human before anyone sees it. Nothing is ever published automatically.'}
+            ? 'अभी सबमिशन तुरंत सार्वजनिक साक्ष्य में जाते हैं। रिपोर्ट पर पोस्ट छिप जाता है; झंडे लगे आइटम /admin में दिखते हैं। मानव-पूर्व-प्रकाशन वापस लाया जा सकता है।'
+            : 'Right now submissions go live as public evidence immediately. A report hides the item; flagged items surface in /admin. Human-before-public can be restored.'}
         </p>
       </header>
 
@@ -89,8 +89,8 @@ export default function Moderation() {
         </h2>
         <p className="text-sub">
           {hi
-            ? 'हर पोस्ट पर “रिपोर्ट करें” बटन है — इसके लिए खाते की ज़रूरत नहीं। रिपोर्ट होते ही वह पोस्ट सार्वजनिक फ़ीड से हट जाता है और दोबारा जाँच के बाद ही लौटता है। रचनाकार और प्रभावित व्यक्ति भी यही रास्ता इस्तेमाल कर सकते हैं।'
-            : 'Every item has a Report button — no account needed. A reported item leaves the public feed immediately and only returns after a human re-reviews it. Original creators and affected people can use the same path.'}
+            ? 'हर पोस्ट पर “रिपोर्ट करें” बटन है — खाते की ज़रूरत नहीं। रिपोर्ट होते ही वह सार्वजनिक फ़ीड से हट जाता है और दोबारा जाँच के बाद ही लौटता है।'
+            : 'Every item has a Report button — no account needed. A reported item leaves the public feed immediately and only returns after a human re-reviews it.'}
         </p>
       </section>
 

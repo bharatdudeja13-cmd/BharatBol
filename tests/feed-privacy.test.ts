@@ -63,20 +63,18 @@ describe('no submitter identity is exposed', () => {
   });
 });
 
-describe('nothing is published without a human', () => {
+describe('publishing path (temporary auto-approve)', () => {
   it('the only public read policy on feed_items is status = approved', () => {
     const policies = noComments.match(/create policy[^;]*on public\.feed_items[^;]*;/g) ?? [];
     expect(policies.length).toBe(1);
     expect(policies[0]).toMatch(/for select using \(status = 'approved'\)/);
   });
 
-  it('feed-submit can only ever write status pending', () => {
+  it('feed-submit auto-publishes as approved (temporary human-approved policy)', () => {
     const src = read('supabase/functions/feed-submit/index.ts');
-    // Every status literal in the file (insert + response) must be 'pending'.
-    const statuses = [...src.matchAll(/status:\s*'([a-z_]+)'/g)].map((m) => m[1]);
-    expect(statuses.length).toBeGreaterThan(0);
-    expect(new Set(statuses)).toEqual(new Set(['pending']));
-    expect(src).not.toMatch(/'approved'/);
+    expect(src).toMatch(/status:\s*'approved'/);
+    expect(src).toMatch(/TEMPORARY/);
+    expect(src).not.toMatch(/status:\s*'pending'/);
   });
 
   it('feed-moderate requires membership of the sealed admins table', () => {
@@ -85,17 +83,15 @@ describe('nothing is published without a human', () => {
     expect(src).toMatch(/not a moderator/);
   });
 
-  it('the automated pre-screen only flags — it never approves or rejects', () => {
+  it('the automated pre-screen only flags — it never rejects', () => {
     const src = read('supabase/functions/feed-submit/index.ts');
     expect(src).toMatch(/flagged/);
-    expect(src).not.toMatch(/status:\s*'(approved|rejected)'/);
+    expect(src).not.toMatch(/status:\s*'rejected'/);
   });
 
   it('a report pulls an approved item out of the public feed', () => {
     const src = read('supabase/functions/feed-report/index.ts');
     expect(src).toMatch(/patch\.status = 're_review'/);
-    // Launch policy is hide-on-first-report, routed through one named seam
-    // so a later threshold / trusted-reporter rule has an obvious home.
     expect(src).toMatch(/function shouldPullToReReview/);
     expect(src).toMatch(/SEAM/);
   });

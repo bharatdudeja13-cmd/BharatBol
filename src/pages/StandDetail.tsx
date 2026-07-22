@@ -6,6 +6,8 @@ import { useI18n } from '../lib/i18n';
 import { LiveNumber } from '../components/LiveNumber';
 import { SupporterWall } from '../components/SupporterWall';
 import { StateBars } from '../components/StateBars';
+import { EvidenceStrip } from '../components/EvidenceStrip';
+import { useEvidence } from '../state/useEvidence';
 import { fmt } from '../lib/format';
 
 export default function StandDetail() {
@@ -15,6 +17,7 @@ export default function StandDetail() {
   const { t, lang } = useI18n();
 
   const stand = stands.find((s) => s.id === id);
+  const { items: evidence } = useEvidence({ issue: stand?.category, limit: 24, enabled: !!stand });
   const standWall = useMemo(() => wall.filter((w) => w.stand_id === id), [wall, id]);
   const standStates = useMemo(
     () => breakdown.filter((r) => r.stand_id === id).map((r) => ({ state: r.state, count: r.count })),
@@ -90,6 +93,11 @@ export default function StandDetail() {
         )}
         <p className="mt-4 text-[11px] text-sub font-mono">{t('counts.verified')}</p>
       </div>
+
+      {/* Evidences for this issue */}
+      <section className="mt-10">
+        <EvidenceStrip items={evidence} issue={stand.category} />
+      </section>
 
       {/* State breakdown */}
       {standStates.length > 0 && (

@@ -8,6 +8,8 @@ import { SupporterWall } from '../components/SupporterWall';
 import { Tilegram } from '../components/Tilegram';
 import { AshokaChakra } from '../components/AshokaChakra';
 import { NationalFlag } from '../components/NationalFlag';
+import { EvidenceStrip } from '../components/EvidenceStrip';
+import { useEvidence, evidenceWatchPath } from '../state/useEvidence';
 import { fmt } from '../lib/format';
 import { stateName } from '../lib/states';
 
@@ -15,6 +17,7 @@ export default function Home() {
   const { stands, counts, national, wall, breakdown, loading } = useStands();
   const { t, lang } = useI18n();
   const [selState, setSelState] = useState<string | null>(null);
+  const { items: stateEvidence } = useEvidence({ state: selState, limit: 24, enabled: !!selState });
 
   const todayTotal = useMemo(
     () => Object.values(counts).reduce((a, c) => a + c.today, 0),
@@ -58,6 +61,9 @@ export default function Home() {
           <Link to="/stands" className="btn-primary text-base px-8">
             {t('hero.ctaStand')}
           </Link>
+          <Link to="/evidence" className="btn-secondary text-base">
+            {t('evidence.title')}
+          </Link>
           <Link to="/about" className="btn-secondary text-base">
             {t('hero.ctaAbout')}
           </Link>
@@ -79,14 +85,22 @@ export default function Home() {
           <span>{t('map.legendHigh')}</span>
         </div>
         {selState && (
-          <div className="card mt-6 p-5">
-            <h3 className="font-display font-semibold text-lg">
-              {fmt(countsByState[selState] ?? 0)} {t('map.inState')} {stateName(selState, lang)}
-            </h3>
+          <div className="card mt-6 p-5 space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="font-display font-semibold text-lg">
+                {fmt(countsByState[selState] ?? 0)} {t('map.inState')} {stateName(selState, lang)}
+              </h3>
+              <Link
+                to={evidenceWatchPath({ state: selState })}
+                className="btn-primary text-sm !py-2 !px-4"
+              >
+                {t('evidence.viewState')}
+              </Link>
+            </div>
             {stateStandRows.length === 0 ? (
-              <p className="text-sm text-sub mt-2">{t('map.noData')}</p>
+              <p className="text-sm text-sub">{t('map.noData')}</p>
             ) : (
-              <ul className="mt-3 divide-y divide-line">
+              <ul className="divide-y divide-line">
                 {stateStandRows.map((r) => {
                   const stand = stands.find((s) => s.id === r.stand_id);
                   if (!stand) return null;
@@ -106,6 +120,11 @@ export default function Home() {
                 })}
               </ul>
             )}
+            <EvidenceStrip
+              items={stateEvidence}
+              state={selState}
+              title={`${t('evidence.title')} · ${stateName(selState, lang)}`}
+            />
           </div>
         )}
       </section>
