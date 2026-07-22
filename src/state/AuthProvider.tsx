@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { SITE_URL, supabase } from '../lib/supabase';
 import type { Profile } from '../lib/types';
 
 type AuthCtx = {
@@ -37,6 +37,26 @@ function guessFirstName(session: Session): string {
   return raw.trim().split(/\s+/)[0] ?? '';
 }
 
+/** Strip OAuth code/state from the URL after PKCE exchange so refresh is clean. */
+function cleanAuthParamsFromUrl() {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  let dirty = false;
+  for (const k of ['code', 'state', 'error', 'error_description']) {
+    if (url.searchParams.has(k)) {
+      url.searchParams.delete(k);
+      dirty = true;
+    }
+  }
+  if (url.hash.includes('access_token') || url.hash.includes('error')) {
+    url.hash = '';
+    dirty = true;
+  }
+  if (dirty) {
+    window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -44,15 +64,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!supabase) return;
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+    let cancelled = false;
+
+    (async () => {
+      // getSession reads storage AND completes URL code exchange when present.
+      const { data, error } = await supabase!.auth.getSession();
+      if (cancelled) return;
+      if (error) console.warn('auth.getSession', error.message);
+      setSession(data.session ?? null);
+      if (data.session) cleanAuthParamsFromUrl();
       setReady(true);
+    })();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
+      setSession(next);
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+        if (next) cleanAuthParamsFromUrl();
+        setReady(true);
+      }
+      if (event === 'SIGNED_OUT') {
+        setProfile(null);
+      }
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    return () => sub.subscription.unsubscribe();
+
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
-  // Ensure a profile row exists for the signed-in user.
   useEffect(() => {
     if (!supabase || !session) {
       setProfile(null);
@@ -86,10 +126,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(async () => {
     if (!supabase) return;
-    await supabase.auth.signInWithOAuth({
+    // Prefer the origin the user is actually on (custom domain or Pages).
+    // SITE_URL is a fallback for SSR-less edge cases. Both must be in
+    // Supabase Auth → Redirect URLs. Google consent "App name" is set in
+    // Google Cloud (not fixable in app code) — see docs/DEPLOY.md.
+    const origin =
+      typeof window !== 'undefined' ? window.location.origin : SITE_URL.replace(/\/$/, '');
+    const path =
+      typeof window !== 'undefined'
+        ? `${window.location.pathname}${window.location.search}`
+        : '/';
+    const redirectTo = `${origin}${path.startsWith('/') ? path : `/${path}`}`;
+    try {
+      sessionStorage.setItem('bharatbol:auth-return', redirectTo);
+    } catch {
+      /* ignore */
+    }
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.href },
+      options: {
+        redirectTo,
+        queryParams: {
+          // Helps some browsers keep account chooser; does not change consent brand.
+          prompt: 'select_account',
+        },
+      },
     });
+    if (error) console.warn('signInWithOAuth', error.message);
   }, []);
 
   const signOut = useCallback(async () => {

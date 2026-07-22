@@ -1,6 +1,4 @@
 // Sample feed items for local demo mode (no Supabase configured).
-// Deliberately mundane, issue-framed civic clips — no real-world claims
-// are made about these placeholder URLs beyond the neutral titles here.
 import type { FeedItem } from './types';
 
 const day = (n: number) =>
@@ -16,6 +14,7 @@ export const DEMO_FEED: FeedItem[] = [
     thumbnail_url: null,
     issue: 'education',
     state: 'MH',
+    scope: 'state',
     status: 'approved',
     submitted_on: day(0),
     approved_at: new Date().toISOString(),
@@ -29,6 +28,7 @@ export const DEMO_FEED: FeedItem[] = [
     thumbnail_url: null,
     issue: 'transparency',
     state: 'DL',
+    scope: 'state',
     status: 'approved',
     submitted_on: day(1),
     approved_at: new Date(Date.now() - 86_400_000).toISOString(),
@@ -42,6 +42,7 @@ export const DEMO_FEED: FeedItem[] = [
     thumbnail_url: null,
     issue: 'education',
     state: 'BR',
+    scope: 'state',
     status: 'approved',
     submitted_on: day(2),
     approved_at: new Date(Date.now() - 2 * 86_400_000).toISOString(),
@@ -55,8 +56,23 @@ export const DEMO_FEED: FeedItem[] = [
     thumbnail_url: null,
     issue: 'employment',
     state: 'UP',
+    scope: 'state',
     status: 'approved',
     submitted_on: day(3),
     approved_at: new Date(Date.now() - 3 * 86_400_000).toISOString(),
+  },
+  {
+    id: 'f0000000-0000-4000-8000-000000000005',
+    url: 'https://www.youtube.com/watch?v=M7lc1UVf-VE',
+    platform: 'youtube',
+    title: 'Across India: citizens share what national media skipped this week',
+    author_name: 'Sample Citizen',
+    thumbnail_url: null,
+    issue: 'transparency',
+    state: null,
+    scope: 'national',
+    status: 'approved',
+    submitted_on: day(0),
+    approved_at: new Date(Date.now() - 3_600_000).toISOString(),
   },
 ];

@@ -19,6 +19,10 @@ function thumb(item: FeedItem): string | null {
   return null;
 }
 
+function scopeOf(item: FeedItem): 'state' | 'national' {
+  return item.scope ?? (item.state ? 'state' : 'national');
+}
+
 /**
  * Horizontal evidence strip for an issue (and optional state).
  * Tap opens the shorts-style player filtered to the same set.
@@ -28,13 +32,36 @@ export function EvidenceStrip({
   issue,
   state,
   title,
+  loading,
 }: {
   items: FeedItem[];
   issue?: string | null;
   state?: string | null;
   title?: string;
+  loading?: boolean;
 }) {
   const { t, lang } = useI18n();
+
+  if (loading) {
+    return (
+      <section className="space-y-3">
+        <div className="flex items-end justify-between gap-3">
+          <h2 className="font-display font-semibold text-xl text-navy">
+            {title ?? t('evidence.title')}
+          </h2>
+        </div>
+        <div className="flex gap-3 overflow-hidden">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="shrink-0 w-36 sm:w-40 rounded-2xl border border-line bg-faint animate-pulse aspect-[9/16]"
+            />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   if (items.length === 0) {
     return (
       <section className="space-y-3">
@@ -70,6 +97,7 @@ export function EvidenceStrip({
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory">
         {items.map((item) => {
           const src = thumb(item);
+          const national = scopeOf(item) === 'national';
           return (
             <Link
               key={item.id}
@@ -86,7 +114,11 @@ export function EvidenceStrip({
                 )}
                 <span className="absolute bottom-2 left-2 right-2 text-[10px] font-mono text-white/90 drop-shadow">
                   {issueLabel(item.issue, lang)}
-                  {item.state ? ` · ${stateName(item.state, lang)}` : ''}
+                  {national
+                    ? ` · ${t('add.allIndia')}`
+                    : item.state
+                      ? ` · ${stateName(item.state, lang)}`
+                      : ''}
                 </span>
               </div>
               <p className="p-2 text-xs line-clamp-2 text-ink">{item.title ?? item.url}</p>

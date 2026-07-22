@@ -34,7 +34,7 @@ function poster(item: FeedItem): string | null {
   return y ? `https://i.ytimg.com/vi/${y}/hqdefault.jpg` : null;
 }
 
-/** Full-viewport shorts player. Account-linked Useful/Not useful. */
+/** Full-viewport shorts player. Poster stays until embed loads; one active iframe. */
 export default function EvidencePlayer() {
   const [params] = useSearchParams();
   const issue = isIssueSlug(params.get('issue') ?? '') ? params.get('issue') : null;
@@ -52,13 +52,17 @@ export default function EvidencePlayer() {
   const [loading, setLoading] = useState(true);
   const [muted, setMuted] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  /** Embed ready per item id — poster stays until true. */
+  const [ready, setReady] = useState<Record<string, boolean>>({});
   const scrollerRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLElement | null)[]>([]);
+  const ytIframeRef = useRef<HTMLIFrameElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
+      setReady({});
       const list = await loadEvidence({ issue, state, limit: 40 });
       if (cancelled) return;
       setItems(list);
@@ -125,6 +129,21 @@ export default function EvidencePlayer() {
     for (const el of slideRefs.current) if (el) obs.observe(el);
     return () => obs.disconnect();
   }, [items.length]);
+
+  // Mute/unmute YouTube without remounting (avoids black flash).
+  useEffect(() => {
+    const frame = ytIframeRef.current;
+    if (!frame?.contentWindow) return;
+    const cmd = muted ? 'mute' : 'unMute';
+    try {
+      frame.contentWindow.postMessage(
+        JSON.stringify({ event: 'command', func: cmd, args: [] }),
+        '*'
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [muted, active]);
 
   const relatedStand = useMemo(() => {
     const item = items[active];
@@ -197,14 +216,14 @@ export default function EvidencePlayer() {
   return (
     <div className="fixed inset-0 z-40 bg-black text-white">
       <header className="absolute top-0 inset-x-0 z-50 flex items-center justify-between gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 bg-gradient-to-b from-black/70 to-transparent">
-        <Link to={issue ? `/feed?issue=${issue}` : '/feed'} className="text-sm font-semibold">
+        <Link to={issue ? `/feed?issue=${issue}` : state ? '/' : '/feed'} className="text-sm font-semibold">
           ← {t('misc.back')}
         </Link>
         <p className="text-xs font-mono truncate">
           {issue ? issueLabel(issue, lang) : t('evidence.title')}
           {state ? ` · ${stateName(state, lang)}` : ''}
         </p>
-        <button type="button" className="text-sm" onClick={() => setMuted((m) => !m)}>
+        <button type="button" className="text-sm min-h-11 px-2" onClick={() => setMuted((m) => !m)}>
           {muted ? t('evidence.unmute') : t('evidence.mute')}
         </button>
       </header>
@@ -222,6 +241,8 @@ export default function EvidencePlayer() {
           const yid = item.platform === 'youtube' ? ytId(item.url) : null;
           const iid = item.platform === 'instagram' ? igId(item.url) : null;
           const img = poster(item);
+          const embedReady = !!ready[item.id];
+          const showPoster = !isActive || !embedReady || !(yid || iid);
 
           return (
             <section
@@ -232,34 +253,58 @@ export default function EvidencePlayer() {
               data-idx={idx}
               className="relative h-[100dvh] w-full snap-start snap-always flex items-center justify-center bg-black"
             >
-              {img && !(isActive && (yid || iid)) && (
-                <img
-                  src={img}
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover opacity-80"
-                  loading={near ? 'eager' : 'lazy'}
-                />
-              )}
+              {showPoster &&
+                (img ? (
+                  <img
+                    src={img}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover opacity-90"
+                    loading={near ? 'eager' : 'lazy'}
+                    decoding="async"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-navyDeep px-6 text-center">
+                    <p className="text-sm font-mono text-white/70">{PLATFORM_LABEL[item.platform]}</p>
+                    <p className="text-base font-semibold line-clamp-4">{item.title ?? item.url}</p>
+                  </div>
+                ))}
 
               {isActive && yid && (
                 <iframe
-                  key={`yt-${item.id}-${muted ? 'm' : 'u'}`}
-                  className="absolute inset-0 w-full h-full"
-                  src={`https://www.youtube-nocookie.com/embed/${yid}?autoplay=1&rel=0&playsinline=1&modestbranding=1&mute=${muted ? 1 : 0}`}
+                  ref={ytIframeRef}
+                  className={`absolute inset-0 w-full h-full transition-opacity duration-300 ${
+                    embedReady ? 'opacity-100' : 'opacity-0'
+                  }`}
+                  src={`https://www.youtube-nocookie.com/embed/${yid}?autoplay=1&rel=0&playsinline=1&modestbranding=1&mute=1&enablejsapi=1`}
                   title={item.title ?? 'YouTube'}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture"
                   allowFullScreen
+                  onLoad={() => {
+                    setReady((r) => ({ ...r, [item.id]: true }));
+                    if (!muted && ytIframeRef.current?.contentWindow) {
+                      try {
+                        ytIframeRef.current.contentWindow.postMessage(
+                          JSON.stringify({ event: 'command', func: 'unMute', args: [] }),
+                          '*'
+                        );
+                      } catch {
+                        /* ignore */
+                      }
+                    }
+                  }}
                 />
               )}
 
               {isActive && iid && (
                 <iframe
-                  key={`ig-${item.id}`}
-                  className="absolute inset-0 w-full h-full bg-black"
+                  className={`absolute inset-0 w-full h-full bg-black transition-opacity duration-300 ${
+                    embedReady ? 'opacity-100' : 'opacity-0'
+                  }`}
                   src={`https://www.instagram.com/reel/${iid}/embed/captioned/`}
                   title={item.title ?? 'Instagram'}
                   allow="autoplay; encrypted-media; picture-in-picture"
                   loading="eager"
+                  onLoad={() => setReady((r) => ({ ...r, [item.id]: true }))}
                 />
               )}
 
@@ -278,15 +323,17 @@ export default function EvidencePlayer() {
                 </div>
               )}
 
-              <div className="absolute inset-x-0 bottom-0 z-20 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-black/80 via-black/40 to-transparent space-y-3">
+              <div className="absolute inset-x-0 bottom-0 z-20 p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-black/85 via-black/45 to-transparent space-y-3">
                 <p className="text-[11px] font-mono uppercase tracking-wide text-saffron">
                   {t('feed.unverified')} · {PLATFORM_LABEL[item.platform]}
+                  {(item.scope ?? (item.state ? 'state' : 'national')) === 'national'
+                    ? ` · ${t('add.allIndia')}`
+                    : item.state
+                      ? ` · ${stateName(item.state, lang)}`
+                      : ''}
                 </p>
                 <p className="text-sm font-semibold line-clamp-2">{item.title ?? item.url}</p>
-                <p className="text-xs text-white/70">
-                  {issueLabel(item.issue, lang)}
-                  {item.state ? ` · ${stateName(item.state, lang)}` : ''}
-                </p>
+                <p className="text-xs text-white/70">{issueLabel(item.issue, lang)}</p>
                 <p className="text-[11px] text-white/60">{t('evidence.reactHonest')}</p>
 
                 <div className="flex flex-wrap items-center gap-2">
@@ -294,7 +341,7 @@ export default function EvidencePlayer() {
                     type="button"
                     disabled={busyId === item.id}
                     onClick={() => void react(item, 'up')}
-                    className={`rounded-full px-3 py-1.5 text-sm font-semibold border ${
+                    className={`min-h-11 rounded-full px-4 py-2 text-sm font-semibold border ${
                       my === 'up' ? 'bg-white text-navy border-white' : 'border-white/40'
                     }`}
                   >
@@ -304,7 +351,7 @@ export default function EvidencePlayer() {
                     type="button"
                     disabled={busyId === item.id}
                     onClick={() => void react(item, 'down')}
-                    className={`rounded-full px-3 py-1.5 text-sm font-semibold border ${
+                    className={`min-h-11 rounded-full px-4 py-2 text-sm font-semibold border ${
                       my === 'down' ? 'bg-white text-navy border-white' : 'border-white/40'
                     }`}
                   >
@@ -313,19 +360,20 @@ export default function EvidencePlayer() {
                   <button
                     type="button"
                     onClick={() => void report(item)}
-                    className="rounded-full px-3 py-1.5 text-sm border border-white/30 text-white/80"
+                    className="min-h-11 rounded-full px-4 py-2 text-sm border border-white/30 text-white/80"
                   >
                     {t('feed.report')}
                   </button>
-                  {relatedStand && (
-                    <Link
-                      to={`/stand/${relatedStand.id}`}
-                      className="rounded-full px-3 py-1.5 text-sm font-semibold bg-saffron text-navy"
-                    >
-                      {t('evidence.nowStand')}
-                    </Link>
-                  )}
                 </div>
+
+                {relatedStand && (
+                  <Link
+                    to={`/stand/${relatedStand.id}`}
+                    className="flex items-center justify-center min-h-12 w-full rounded-2xl px-4 py-3 text-base font-bold bg-saffron text-navy shadow-lift"
+                  >
+                    {t('evidence.nowStand')} — {lang === 'hi' && relatedStand.title_hi ? relatedStand.title_hi : relatedStand.title}
+                  </Link>
+                )}
               </div>
             </section>
           );

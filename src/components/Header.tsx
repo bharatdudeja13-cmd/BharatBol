@@ -31,12 +31,15 @@ export function Header() {
           </span>
         </Link>
 
-        <nav className="flex items-center gap-1" aria-label="Main">
+        <nav className="hidden md:flex items-center gap-1" aria-label="Main">
           <NavLink to="/stands" className={navCls}>
             {t('nav.stands')}
           </NavLink>
           <NavLink to="/feed" className={navCls}>
             {t('nav.feed')}
+          </NavLink>
+          <NavLink to="/evidence" className={navCls}>
+            {t('nav.watch')}
           </NavLink>
           <NavLink to="/about" className={navCls}>
             {t('nav.about')}

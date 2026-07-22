@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
   if (authErr || !userData?.user) return json({ error: 'sign in to submit' }, 401);
   const userId = userData.user.id;
 
-  let body: { url?: string; issue?: string; state?: string | null };
+  let body: { url?: string; issue?: string; state?: string | null; scope?: string | null };
   try {
     body = await req.json();
   } catch {
@@ -90,7 +90,16 @@ Deno.serve(async (req) => {
   const parsed = parseSocialUrl(body.url ?? '');
   if (!parsed) return json({ error: 'unsupported link' }, 400);
   if (!ISSUES.includes(body.issue ?? '')) return json({ error: 'pick an issue' }, 400);
-  const state = body.state && STATE_CODES.has(body.state) ? body.state : null;
+
+  // Geography required: a valid state code OR explicit national (All India).
+  const wantsNational =
+    body.scope === 'national' || body.state === '' || body.state === 'IN' || body.state === '__national__';
+  const stateCode = body.state && STATE_CODES.has(body.state) ? body.state : null;
+  if (!wantsNational && !stateCode) {
+    return json({ error: 'pick a state or All India' }, 400);
+  }
+  const scope = wantsNational && !stateCode ? 'national' : 'state';
+  const state = scope === 'national' ? null : stateCode;
 
   // Rate limit (rolling 24h).
   const since = new Date(Date.now() - 86_400_000).toISOString();
@@ -133,6 +142,7 @@ Deno.serve(async (req) => {
       thumbnail_url: meta.thumbnail_url ?? null,
       issue: body.issue,
       state,
+      scope,
       // TEMPORARY (human-approved): auto-publish so evidence lands immediately.
       // Report → re_review still hides; flagged still prioritises /admin.
       // Flip back to 'pending' to restore human-before-public.

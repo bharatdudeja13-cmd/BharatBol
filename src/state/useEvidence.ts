@@ -13,26 +13,68 @@ export type EvidenceFilters = {
   enabled?: boolean;
 };
 
+function sortEvidenceForState(list: FeedItem[], stateCode: string | null | undefined): FeedItem[] {
+  if (!stateCode) return list;
+  return [...list].sort((a, b) => {
+    const aLocal = a.state === stateCode ? 0 : 1;
+    const bLocal = b.state === stateCode ? 0 : 1;
+    if (aLocal !== bLocal) return aLocal - bLocal;
+    const at = a.approved_at ?? '';
+    const bt = b.approved_at ?? '';
+    return bt.localeCompare(at);
+  });
+}
+
 /** Approved feed items = public evidence. */
 export async function loadEvidence(filters: EvidenceFilters = {}): Promise<FeedItem[]> {
   if (filters.enabled === false) return [];
   if (!supabase) {
-    return DEMO_FEED.filter((i) => {
+    const list = DEMO_FEED.filter((i) => {
       if (filters.issue && i.issue !== filters.issue) return false;
-      if (filters.state && i.state !== filters.state) return false;
+      if (filters.state) {
+        const scope = i.scope ?? (i.state ? 'state' : 'national');
+        if (scope !== 'national' && i.state !== filters.state) return false;
+      }
       return true;
     });
+    return sortEvidenceForState(list, filters.state).slice(0, filters.limit ?? 40);
   }
+
+  const select =
+    'id,url,platform,title,author_name,thumbnail_url,issue,state,scope,status,submitted_on,approved_at';
   let q = supabase
     .from('feed_items')
-    .select('id,url,platform,title,author_name,thumbnail_url,issue,state,status,submitted_on,approved_at')
+    .select(select)
     .eq('status', 'approved')
     .order('approved_at', { ascending: false })
-    .limit(filters.limit ?? 40);
+    .limit(Math.max((filters.limit ?? 40) * 2, 40));
+
   if (filters.issue) q = q.eq('issue', filters.issue);
-  if (filters.state) q = q.eq('state', filters.state);
-  const { data } = await q;
-  return (data as FeedItem[]) ?? [];
+  if (filters.state) {
+    q = q.or(`state.eq.${filters.state},scope.eq.national`);
+  }
+
+  let { data, error } = await q;
+  // Pre-phase7 DBs lack `scope` — fall back so public evidence still loads for everyone.
+  if (error && /scope/i.test(error.message)) {
+    let q2 = supabase
+      .from('feed_items')
+      .select(
+        'id,url,platform,title,author_name,thumbnail_url,issue,state,status,submitted_on,approved_at'
+      )
+      .eq('status', 'approved')
+      .order('approved_at', { ascending: false })
+      .limit(filters.limit ?? 40);
+    if (filters.issue) q2 = q2.eq('issue', filters.issue);
+    // Without scope: show all approved (incl. null state) when filtering by state,
+    // so tiles never look empty while migration rolls out.
+    const res2 = await q2;
+    data = res2.data as typeof data;
+    error = res2.error;
+  }
+  if (error) return [];
+  const list = (data as FeedItem[] | null) ?? [];
+  return sortEvidenceForState(list, filters.state).slice(0, filters.limit ?? 40);
 }
 
 export async function loadReactionCounts(ids: string[]): Promise<Record<string, ReactionCounts>> {
