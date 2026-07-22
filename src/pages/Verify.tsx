@@ -8,8 +8,7 @@ import { fmt } from '../lib/format';
 
 /**
  * Verify — account-linked mode: compare displayed stand_counts to a
- * fresh read of stand_commitments aggregates, and list this account's stands.
- * (Anonymous ballot_log recount is paused while receipts are retired.)
+ * fresh read of public aggregates, and list this account's stands.
  */
 export default function Verify() {
   const { session, signIn } = useAuth();
@@ -119,7 +118,7 @@ export default function Verify() {
 
       <p className="text-xs text-sub">
         <a href={REPO_URL} target="_blank" rel="noreferrer" className="underline underline-offset-4">
-          Source on GitHub
+          {t('about.openSource')}
         </a>
       </p>
     </div>
