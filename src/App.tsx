@@ -6,6 +6,7 @@ import { AuthProvider } from './state/AuthProvider';
 import { StandsProvider } from './state/StandsProvider';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ProfileGateModal } from './components/ProfileGateModal';
 import { ShareSheet } from './components/ShareSheet';
 import Home from './pages/Home';
@@ -18,7 +19,12 @@ import Verify from './pages/Verify';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
-  useEffect(() => window.scrollTo(0, 0), [pathname]);
+  useEffect(() => {
+    // Block body on purpose: scrollTo returns a Promise in newer Chrome,
+    // and a concise arrow would hand that Promise to React as a cleanup
+    // function — crashing (blank page) on the first client-side navigation.
+    window.scrollTo(0, 0);
+  }, [pathname]);
   return null;
 }
 
@@ -56,6 +62,7 @@ export default function App() {
           <div className="min-h-screen flex flex-col">
             <Header />
             <main className="flex-1 pb-8">
+              <ErrorBoundary>
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/stands" element={<Stands />} />
@@ -66,6 +73,7 @@ export default function App() {
                 <Route path="/verify" element={<Verify />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+              </ErrorBoundary>
             </main>
             <Footer />
           </div>
