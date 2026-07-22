@@ -90,6 +90,16 @@ const en = {
   'footer.data': 'Your data & rights',
   'footer.source': 'Open source',
   'demo.banner': 'Demo mode — sample data. Connect Supabase to go live.',
+  'cis.title': 'What BharatBol is — and isn’t',
+  'cis.money':
+    'BharatBol never asks for money. No donations, no fees, no fundraising, no merchandise — ever. Anyone collecting money in this name is committing fraud; do not pay them.',
+  'cis.entity':
+    'BharatBol is not an organisation, movement, NGO, or political entity. Today it is simply an open, non-partisan counting instrument — code, counts, and citizens. No one is authorised to speak, negotiate, or act in its name.',
+  'cis.instruct':
+    'It never tells anyone what to do. It measures where people stand; it does not organise, mobilise, campaign, or endorse.',
+  'cis.future':
+    'If BharatBol ever becomes more than an instrument, it will be announced here first, in the open. Until then, nothing said or done anywhere else speaks for BharatBol — because there is no entity to speak for.',
+  'cis.footerLine': 'BharatBol never asks for money.',
   'misc.loading': 'Loading…',
   'misc.back': 'Back',
   'misc.error': 'Something went wrong. Please try again.',
@@ -183,6 +193,16 @@ const hi: Record<keyof typeof en, string> = {
   'footer.data': 'आपका डेटा व अधिकार',
   'footer.source': 'ओपन सोर्स',
   'demo.banner': 'डेमो मोड — नमूना डेटा। लाइव होने के लिए Supabase जोड़ें।',
+  'cis.title': 'भारत बोल क्या है — और क्या नहीं',
+  'cis.money':
+    'भारत बोल कभी पैसा नहीं माँगता। न चंदा, न शुल्क, न फ़ंडरेज़िंग, न कोई सामान — कभी नहीं। इस नाम पर पैसा वसूलने वाला कोई भी व्यक्ति धोखाधड़ी कर रहा है; उसे भुगतान न करें।',
+  'cis.entity':
+    'भारत बोल कोई संगठन, आंदोलन, एनजीओ या राजनीतिक इकाई नहीं है। आज यह केवल एक खुला, गैर-दलीय गिनती का साधन है — कोड, गिनती और नागरिक। इसके नाम पर बोलने, समझौता करने या कार्रवाई करने का अधिकार किसी को नहीं है।',
+  'cis.instruct':
+    'यह किसी को कुछ करने के लिए नहीं कहता। यह मापता है कि लोग कहाँ खड़े हैं; यह संगठित नहीं करता, आंदोलन नहीं चलाता, प्रचार या समर्थन नहीं करता।',
+  'cis.future':
+    'अगर भारत बोल कभी एक साधन से बढ़कर कुछ बनेगा, तो उसकी घोषणा सबसे पहले यहीं, खुले में होगी। तब तक कहीं और कहा या किया गया कुछ भी भारत बोल की ओर से नहीं है — क्योंकि बोलने के लिए कोई इकाई है ही नहीं।',
+  'cis.footerLine': 'भारत बोल कभी पैसा नहीं माँगता।',
   'misc.loading': 'लोड हो रहा है…',
   'misc.back': 'वापस',
   'misc.error': 'कुछ गड़बड़ हुई। कृपया फिर प्रयास करें।',

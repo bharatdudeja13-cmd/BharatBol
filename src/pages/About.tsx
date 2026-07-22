@@ -43,6 +43,16 @@ export default function About() {
         </p>
       </section>
 
+      {/* Protective block: hard rules that never soften (§C).
+          The privacy section below keeps its exact approved wording. */}
+      <section className="card p-6 space-y-3 border-navy/20">
+        <h2 className="font-display font-semibold text-xl">{t('cis.title')}</h2>
+        <p className="text-sub"><strong className="text-ink">{t('cis.money')}</strong></p>
+        <p className="text-sub">{t('cis.entity')}</p>
+        <p className="text-sub">{t('cis.instruct')}</p>
+        <p className="text-sub italic">{t('cis.future')}</p>
+      </section>
+
       <section className="space-y-3">
         <h2 className="font-display font-semibold text-xl">Rules of the square</h2>
         <ul className="list-disc pl-5 text-sub space-y-2">

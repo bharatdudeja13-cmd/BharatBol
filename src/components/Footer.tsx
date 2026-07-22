@@ -12,7 +12,12 @@ export function Footer() {
           <span className="mt-0.5 text-navy shrink-0">
             <AshokaChakra size={18} />
           </span>
-          <p>{t('disclaimer')}</p>
+          <p>
+            {t('disclaimer')}{' '}
+            <Link to="/about" className="font-semibold text-navy hover:underline underline-offset-4">
+              {t('cis.footerLine')}
+            </Link>
+          </p>
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-navy">
           <Link to="/about" className="hover:underline underline-offset-4">
