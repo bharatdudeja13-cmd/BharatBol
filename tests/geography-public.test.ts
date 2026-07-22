@@ -46,11 +46,22 @@ describe('phase7 geography + public counts', () => {
     expect(src).toMatch(/embedReady|ready\[/);
   });
 
-  it('Home always surfaces evidence count (not only when > 0)', () => {
+  it('Home evidence count and CTA route to Feed', () => {
     const home = read('src/pages/Home.tsx');
+    expect(home).toMatch(/to="\/feed"/);
     expect(home).toMatch(/home\.evidenceCount/);
-    expect(home).toMatch(/useEvidenceCount/);
-    expect(home).not.toMatch(/evidenceTotal > 0 &&/);
+    expect(home).toMatch(/home\.watchEvidence|evidenceWatchPath/);
+  });
+
+  it('Feed surfaces submit-evidence CTA to /add', () => {
+    const feed = read('src/pages/Feed.tsx');
+    expect(feed).toMatch(/to="\/add"/);
+    expect(feed).toMatch(/feed\.submitEvidence/);
+    expect(feed).toMatch(/feed\.submitHint/);
+  });
+
+  it('citizen card truncates many stands with and N more', () => {
+    expect(read('src/lib/cards.ts')).toMatch(/and \$\{more\} more/);
   });
 
   it('Instagram posters use Worker proxy without oEmbed token', () => {

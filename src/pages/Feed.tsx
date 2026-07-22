@@ -260,9 +260,10 @@ export default function Feed() {
       <div className={`${SLIDE_H} bg-bg flex flex-col items-center justify-center px-6 text-center space-y-4`}>
         <h1 className="font-display font-bold text-2xl text-navy">{t('feed.title')}</h1>
         <p className="text-sub text-sm max-w-sm">{t('feed.empty')}</p>
+        <p className="text-xs text-sub max-w-sm">{t('feed.submitHint')}</p>
         <div className="flex flex-wrap gap-3 justify-center">
           <Link to="/add" className="btn-primary">
-            + {t('nav.add')}
+            {t('feed.submitEvidence')}
           </Link>
           {(issue || state) && (
             <button
@@ -304,13 +305,21 @@ export default function Feed() {
             {active + 1}/{items.length}
           </span>
         </p>
-        <button
-          type="button"
-          className="pointer-events-auto min-h-10 px-3 rounded-full bg-white/10 text-xs font-semibold backdrop-blur"
-          onClick={() => setMuted((m) => !m)}
-        >
-          {muted ? t('evidence.unmute') : t('evidence.mute')}
-        </button>
+        <div className="pointer-events-auto flex items-center gap-1.5 shrink-0">
+          <Link
+            to="/add"
+            className="min-h-10 px-3 rounded-full bg-saffron text-navy text-xs font-bold backdrop-blur"
+          >
+            {t('feed.submitEvidence')}
+          </Link>
+          <button
+            type="button"
+            className="min-h-10 px-3 rounded-full bg-white/10 text-xs font-semibold backdrop-blur"
+            onClick={() => setMuted((m) => !m)}
+          >
+            {muted ? t('evidence.unmute') : t('evidence.mute')}
+          </button>
+        </div>
       </header>
 
       {filtersOpen && (
@@ -319,12 +328,13 @@ export default function Feed() {
           onClick={(e) => e.target === e.currentTarget && setFiltersOpen(false)}
         >
           <div className="bg-bg text-ink rounded-t-3xl p-5 space-y-4 max-h-[min(70%,calc(100%-3.5rem))] overflow-y-auto pb-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <h2 className="font-display font-semibold text-lg text-navy">{t('feed.title')}</h2>
-              <Link to="/add" className="text-sm font-semibold text-navy underline underline-offset-4">
-                + {t('nav.add')}
+              <Link to="/add" className="btn-primary text-sm !min-h-10 !px-4 shrink-0">
+                {t('feed.submitEvidence')}
               </Link>
             </div>
+            <p className="text-xs text-sub -mt-2">{t('feed.submitHint')}</p>
             <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
               <button
                 type="button"

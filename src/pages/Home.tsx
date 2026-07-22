@@ -96,7 +96,7 @@ export default function Home() {
             {t('hero.ctaStand')}
           </Link>
           <Link to="/feed" className="btn-secondary text-base min-h-12">
-            {t('nav.feed')}
+            {t('home.watchEvidence')}
           </Link>
           <PwaInstallButton className="btn-ghost text-base min-h-12" />
         </div>
