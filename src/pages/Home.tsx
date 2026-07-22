@@ -10,7 +10,7 @@ import { Tilegram } from '../components/Tilegram';
 import { AshokaChakra } from '../components/AshokaChakra';
 import { NationalFlag } from '../components/NationalFlag';
 import { EvidenceStrip } from '../components/EvidenceStrip';
-import { useEvidence, evidenceWatchPath } from '../state/useEvidence';
+import { useEvidence, useEvidenceCount, evidenceWatchPath } from '../state/useEvidence';
 import { fmt } from '../lib/format';
 import { stateName } from '../lib/states';
 import { PwaInstallButton } from '../components/PwaInstallButton';
@@ -25,6 +25,7 @@ export default function Home() {
     limit: 24,
     enabled: !!selState,
   });
+  const { total: evidenceTotal } = useEvidenceCount();
 
   const todayTotal = useMemo(
     () => Object.values(counts).reduce((a, c) => a + c.today, 0),
@@ -76,6 +77,13 @@ export default function Home() {
             )}
           </span>
         </h1>
+        {evidenceTotal > 0 && (
+          <p className="mt-4 text-sm sm:text-base text-sub">
+            <Link to="/feed" className="font-semibold text-navy underline underline-offset-4">
+              <span className="tabular-nums">{fmt(evidenceTotal)}</span> {t('home.evidenceCount')}
+            </Link>
+          </p>
+        )}
         <p className="mt-4 font-display text-xl sm:text-2xl text-navy max-w-lg mx-auto leading-snug">
           {t('app.tagline')}
         </p>
@@ -86,8 +94,8 @@ export default function Home() {
           <Link to="/stands" className="btn-primary text-base px-8 min-h-12">
             {t('hero.ctaStand')}
           </Link>
-          <Link to="/evidence" className="btn-secondary text-base min-h-12">
-            {t('evidence.title')}
+          <Link to="/feed" className="btn-secondary text-base min-h-12">
+            {t('nav.feed')}
           </Link>
           <PwaInstallButton className="btn-ghost text-base min-h-12" />
         </div>

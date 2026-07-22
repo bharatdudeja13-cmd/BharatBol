@@ -1,6 +1,13 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  detectBrowserLang,
+  isLangCode,
+  LANG_STORAGE_KEY,
+  type LangCode,
+} from '../config/languages';
 
-export type Lang = 'en' | 'hi';
+/** UI language code (scheduled Indian languages + English). */
+export type Lang = LangCode;
 
 const en = {
   'app.name': 'BharatBol',
@@ -11,12 +18,15 @@ const en = {
     'When the news skips your ground truth, speak here. Stand on the issue. Be one of the many - never the named target on the wall unless you choose.',
   'nav.home': 'Home',
   'nav.stands': 'Stands',
+  'nav.feed': 'Feed',
   'nav.watch': 'Watch',
   'nav.addShort': 'Add',
   'nav.about': 'About',
   'nav.profile': 'Me',
   'nav.signIn': 'Sign in',
   'nav.signOut': 'Sign out',
+  'lang.choose': 'Language',
+  'lang.fallbackNote': 'Full translations for Hindi and English. Other languages fall back to English until ready.',
   'hero.ctaStand': 'Take a stand',
   'hero.ctaAbout': 'Why this exists',
   'counts.standing': 'citizens standing',
@@ -44,6 +54,7 @@ const en = {
   'map.especially': 'Especially here',
   'map.evidenceCount': 'clips',
   'home.standOfDay': 'Today’s open stand',
+  'home.evidenceCount': 'citizen evidence clips live',
   'pwa.nudgeTitle': 'Add BharatBol to your home screen',
   'pwa.nudgeBody': 'Stand and share evidence in two taps, like an app, without the store.',
   'pwa.nudgeCta': 'How to install',
@@ -113,12 +124,11 @@ const en = {
   'verify.accountMode':
     'Re-read public stand counts and list the stands on this Google account.',
   'verify.mineNoneAccount': 'You have not stood on any issue yet with this account.',
-  'nav.feed': 'Feed',
   'nav.add': 'Add to feed',
   'feed.title': 'What India is seeing',
   'feed.sub':
-    'Citizen evidence by issue and state. Watch without signing in - same player everywhere. Nothing is re-hosted. Who submitted is never shown.',
-  'feed.empty': 'Nothing here yet. Add the first post.',
+    'Citizen evidence by issue and state. Watch without signing in - swipe like reels. Nothing is re-hosted. Who submitted is never shown.',
+  'feed.empty': 'Nothing here yet. Add the first public reel or post.',
   'feed.allIssues': 'All issues',
   'feed.allStates': 'All states',
   'feed.unverified': 'Unverified - links to the original',
@@ -168,17 +178,18 @@ const en = {
   'evidence.title': 'Evidences',
   'evidence.sub': 'Citizen-submitted clips - unverified, public. Tap to watch. No login required to watch.',
   'evidence.empty': 'No evidence here yet. Add a public reel or post - it will be visible to everyone.',
-  'evidence.watchAll': 'Watch',
-  'evidence.viewState': 'Watch evidence from this state',
+  'evidence.watchAll': 'Open in Feed',
+  'evidence.viewState': 'See evidence from this state',
   'evidence.useful': 'Useful',
   'evidence.notUseful': 'Not useful',
   'evidence.reactHonest':
     'Watching is open to everyone. Useful / Not useful needs sign-in and never shows who.',
   'evidence.nowStand': 'Now stand',
+  'evidence.iStoodUp': 'I stood up',
   'evidence.openOriginal': 'Open original',
   'evidence.mute': 'Sound on',
   'evidence.unmute': 'Muted',
-  'evidence.browseSub': 'Clips grouped by open stands. Tap a clip to watch in sequence.',
+  'evidence.browseSub': 'Clips grouped by open stands. Tap a clip to watch in Feed.',
   'evidence.clipCount': 'clips',
   'evidence.swipeHint': 'Swipe up for next',
   'mod.title': 'Moderation queue',
@@ -296,12 +307,15 @@ const hi: Record<keyof typeof en, string> = {
     'जब समाचार आपकी ज़मीनी सच्चाई छोड़ दे, यहाँ बोलें। मुद्दे पर खड़े हों। भीड़ में एक - दीवार पर नाम तभी जब आप चाहें।',
   'nav.home': 'होम',
   'nav.stands': 'मुद्दे',
+  'nav.feed': 'फ़ीड',
   'nav.watch': 'देखें',
   'nav.addShort': 'जोड़ें',
   'nav.about': 'परिचय',
   'nav.profile': 'मैं',
   'nav.signIn': 'साइन इन',
   'nav.signOut': 'साइन आउट',
+  'lang.choose': 'भाषा',
+  'lang.fallbackNote': 'पूर्ण अनुवाद हिन्दी और अंग्रेज़ी में। अन्य भाषाएँ तैयार होने तक अंग्रेज़ी दिखाएँगी।',
   'hero.ctaStand': 'अपना पक्ष रखें',
   'hero.ctaAbout': 'यह क्यों है',
   'counts.standing': 'नागरिक साथ खड़े हैं',
@@ -329,6 +343,7 @@ const hi: Record<keyof typeof en, string> = {
   'map.especially': 'यहाँ ख़ास',
   'map.evidenceCount': 'क्लिप',
   'home.standOfDay': 'आज का खुला पक्ष',
+  'home.evidenceCount': 'नागरिक साक्ष्य क्लिप लाइव',
   'pwa.nudgeTitle': 'BharatBol होम स्क्रीन पर जोड़ें',
   'pwa.nudgeBody': 'दो टैप में खड़े हों और साक्ष्य साझा करें - स्टोर के बिना ऐप जैसा।',
   'pwa.nudgeCta': 'इंस्टॉल कैसे करें',
@@ -398,11 +413,10 @@ const hi: Record<keyof typeof en, string> = {
   'verify.accountMode':
     'खाता-जुड़ा मोड: सार्वजनिक गिनती दोबारा पढ़ें और इस Google खाते के पक्ष सूचीबद्ध करें।',
   'verify.mineNoneAccount': 'आपने इस खाते से अभी किसी मुद्दे पर पक्ष नहीं लिया।',
-  'nav.feed': 'फ़ीड',
   'nav.add': 'फ़ीड में जोड़ें',
   'feed.title': 'भारत क्या देख रहा है',
-  'feed.sub': 'नागरिक साक्ष्य - मुद्दे और राज्य के अनुसार। बिना साइन इन देखें। कुछ भी दोबारा होस्ट नहीं।',
-  'feed.empty': 'अभी यहाँ कुछ नहीं है। पहला पोस्ट जोड़ें।',
+  'feed.sub': 'नागरिक साक्ष्य - मुद्दे और राज्य के अनुसार। बिना साइन इन स्वाइप करके देखें। कुछ भी दोबारा होस्ट नहीं।',
+  'feed.empty': 'अभी यहाँ कुछ नहीं है। पहली सार्वजनिक रील या पोस्ट जोड़ें।',
   'feed.allIssues': 'सभी मुद्दे',
   'feed.allStates': 'सभी राज्य',
   'feed.unverified': 'असत्यापित - मूल पोस्ट का लिंक',
@@ -452,16 +466,17 @@ const hi: Record<keyof typeof en, string> = {
   'evidence.title': 'साक्ष्य',
   'evidence.sub': 'नागरिक क्लिप - असत्यापित। बिना लॉगिन देखें।',
   'evidence.empty': 'यहाँ अभी साक्ष्य नहीं। सार्वजनिक रील या पोस्ट जोड़ें।',
-  'evidence.watchAll': 'देखें',
+  'evidence.watchAll': 'फ़ीड में खोलें',
   'evidence.viewState': 'इस राज्य के साक्ष्य देखें',
   'evidence.useful': 'उपयोगी',
   'evidence.notUseful': 'उपयोगी नहीं',
   'evidence.reactHonest': 'देखना सबके लिए खुला। उपयोगी चिह्न लॉगिन के बाद - कभी नहीं दिखाता कि कौन।',
   'evidence.nowStand': 'अब खड़े हों',
+  'evidence.iStoodUp': 'मैं खड़ा हो चुका',
   'evidence.openOriginal': 'मूल खोलें',
   'evidence.mute': 'आवाज़ चालू',
   'evidence.unmute': 'मूक',
-  'evidence.browseSub': 'खुले पक्षों के अनुसार क्लिप। क्रम से देखने के लिए टैप करें।',
+  'evidence.browseSub': 'खुले पक्षों के अनुसार क्लिप। फ़ीड में देखने के लिए टैप करें।',
   'evidence.clipCount': 'क्लिप',
   'evidence.swipeHint': 'अगले के लिए ऊपर स्वाइप करें',
   'mod.title': 'समीक्षा कतार',
@@ -565,7 +580,7 @@ const hi: Record<keyof typeof en, string> = {
   'misc.error': 'कुछ गड़बड़ हुई। कृपया फिर प्रयास करें।',
 };
 
-const DICTS: Record<Lang, Record<string, string>> = { en, hi };
+const DICTS: Partial<Record<Lang, Record<string, string>>> = { en, hi };
 
 type I18n = {
   lang: Lang;
@@ -573,21 +588,46 @@ type I18n = {
   t: (key: keyof typeof en) => string;
 };
 
+function readStoredLang(): Lang | null {
+  try {
+    const raw = localStorage.getItem(LANG_STORAGE_KEY);
+    return isLangCode(raw) ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+function initialLang(): Lang {
+  return readStoredLang() ?? detectBrowserLang();
+}
+
 const Ctx = createContext<I18n>({ lang: 'en', setLang: () => {}, t: (k) => en[k] });
 
 export function LangProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>(() =>
-    localStorage.getItem('bharatbol:lang') === 'hi' ? 'hi' : 'en'
-  );
+  const [lang, setLangState] = useState<Lang>(initialLang);
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
-    localStorage.setItem('bharatbol:lang', l);
+    try {
+      localStorage.setItem(LANG_STORAGE_KEY, l);
+    } catch {
+      /* ignore quota / private mode */
+    }
     document.documentElement.lang = l;
   }, []);
+
   const t = useCallback(
-    (key: keyof typeof en) => DICTS[lang][key] ?? en[key],
+    (key: keyof typeof en) => {
+      const dict = DICTS[lang];
+      return dict?.[key] ?? en[key];
+    },
     [lang]
   );
+
   const value = useMemo(() => ({ lang, setLang, t }), [lang, setLang, t]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

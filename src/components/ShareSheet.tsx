@@ -15,6 +15,7 @@ import { SHARE_TEMPLATES, fillTemplate } from '../config/brand';
 export function ShareSheet() {
   const { shareFor, setShareFor, counts, joined } = useStands();
   const { t, lang } = useI18n();
+  const copyLang = lang === 'hi' ? 'hi' : 'en';
   const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
   const [dataUrl, setDataUrl] = useState<string>('');
   const [format, setFormat] = useState<CardFormat>('portrait');
@@ -37,9 +38,9 @@ export function ShareSheet() {
 
   // Reset caption when the sheet opens or language flips.
   useEffect(() => {
-    if (shareFor) setCaption(fillTemplate(SHARE_TEMPLATES.caption[lang], vars));
+    if (shareFor) setCaption(fillTemplate(SHARE_TEMPLATES.caption[copyLang], vars));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shareFor, lang]);
+  }, [shareFor, copyLang]);
 
   // (Re)draw the card when the sheet opens or the format changes.
   useEffect(() => {
@@ -90,8 +91,8 @@ export function ShareSheet() {
     if (canvas) downloadCanvas(canvas, filename);
   };
 
-  const waText = fillTemplate(SHARE_TEMPLATES.whatsapp[lang], vars);
-  const xText = fillTemplate(SHARE_TEMPLATES.x[lang], vars);
+  const waText = fillTemplate(SHARE_TEMPLATES.whatsapp[copyLang], vars);
+  const xText = fillTemplate(SHARE_TEMPLATES.x[copyLang], vars);
 
   return (
     <div

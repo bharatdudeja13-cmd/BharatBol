@@ -26,9 +26,9 @@ export function BottomNav() {
           <span aria-hidden className="text-base">◎</span>
           {t('nav.stands')}
         </NavLink>
-        <NavLink to="/evidence" className={cls}>
+        <NavLink to="/feed" className={cls}>
           <span aria-hidden className="text-base">▷</span>
-          {t('nav.watch')}
+          {t('nav.feed')}
         </NavLink>
         <NavLink to="/add" className={cls}>
           <span aria-hidden className="text-base">＋</span>

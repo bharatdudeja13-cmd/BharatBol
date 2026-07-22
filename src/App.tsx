@@ -21,7 +21,6 @@ import Feed from './pages/Feed';
 import AddToFeed from './pages/AddToFeed';
 import Moderation from './pages/Moderation';
 import Admin from './pages/Admin';
-import EvidencePlayer from './pages/EvidencePlayer';
 import { configError } from './lib/supabase';
 
 /** Deployed with no backend config: a clear failure, never silent demo data. */
@@ -68,18 +67,24 @@ function JoinErrorToast() {
   );
 }
 
-/** Space reserved for mobile BottomNav so Watch reels never cover it. */
+/** Space for mobile BottomNav so Feed reels never cover it. */
 const NAV_PAD = 'pb-[calc(3.25rem+env(safe-area-inset-bottom))] md:pb-8';
+
+/** Preserve deep links from the retired /evidence route. */
+function EvidenceRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/feed${search}`} replace />;
+}
 
 function Shell() {
   const { pathname } = useLocation();
-  // Watch is reels-style: hide chrome header/footer, keep BottomNav always.
-  const watch = pathname.startsWith('/evidence');
+  // Feed is reels-style explore: hide header/footer, keep BottomNav always.
+  const explore = pathname.startsWith('/feed');
 
   return (
     <div className="min-h-screen flex flex-col">
-      {!watch && <Header />}
-      <main className={`flex-1 ${watch ? `min-h-0 ${NAV_PAD}` : NAV_PAD}`}>
+      {!explore && <Header />}
+      <main className={`flex-1 ${explore ? `min-h-0 ${NAV_PAD}` : NAV_PAD}`}>
         <ErrorBoundary>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -91,14 +96,14 @@ function Shell() {
             <Route path="/verify" element={<Verify />} />
             <Route path="/feed" element={<Feed />} />
             <Route path="/add" element={<AddToFeed />} />
-            <Route path="/evidence" element={<EvidencePlayer />} />
+            <Route path="/evidence" element={<EvidenceRedirect />} />
             <Route path="/moderation" element={<Moderation />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </ErrorBoundary>
       </main>
-      {!watch && <Footer />}
+      {!explore && <Footer />}
       <BottomNav />
     </div>
   );

@@ -105,6 +105,36 @@ export async function loadEvidenceById(id: string): Promise<FeedItem | null> {
   return data as FeedItem;
 }
 
+/** Public approved evidence count (homepage + Feed empty/loading context). */
+export async function loadEvidenceCount(): Promise<number> {
+  if (!supabase) return DEMO_FEED.length;
+  const { count, error } = await supabase
+    .from('feed_items')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'approved');
+  if (error) return 0;
+  return count ?? 0;
+}
+
+export function useEvidenceCount() {
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const n = await loadEvidenceCount();
+      if (!cancelled) {
+        setTotal(n);
+        setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return { total, loading };
+}
+
 export async function loadReactionCounts(ids: string[]): Promise<Record<string, ReactionCounts>> {
   const out: Record<string, ReactionCounts> = {};
   if (ids.length === 0) return out;
@@ -158,7 +188,7 @@ export function evidenceWatchPath(opts: {
   if (opts.id) p.set('id', opts.id);
   if (opts.stand) p.set('stand', opts.stand);
   const q = p.toString();
-  return q ? `/evidence?${q}` : '/evidence';
+  return q ? `/feed?${q}` : '/feed';
 }
 
 export const evidenceLive = isLive;

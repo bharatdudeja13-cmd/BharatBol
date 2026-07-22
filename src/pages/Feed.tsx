@@ -1,227 +1,497 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useFeed, callFeedFn, feedLive } from '../state/useFeed';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../state/AuthProvider';
 import { useStands } from '../state/StandsProvider';
+import { callFeedFn } from '../state/useFeed';
+import {
+  loadEvidence,
+  loadEvidenceById,
+  loadReactionCounts,
+  type ReactionCounts,
+} from '../state/useEvidence';
 import { useI18n } from '../lib/i18n';
-import { ISSUES, issueLabel } from '../config/issues';
-import { STATES, stateName } from '../lib/states';
-import { FeedCard } from '../components/FeedCard';
-import { evidenceWatchPath } from '../state/useEvidence';
-import { fmt } from '../lib/format';
+import { issueLabel, isIssueSlug, ISSUES } from '../config/issues';
+import { stateName, STATES } from '../lib/states';
+import { PLATFORM_LABEL } from '../lib/feedUrl';
 import type { FeedItem, Stand } from '../lib/types';
-import { PwaInstallButton } from '../components/PwaInstallButton';
+import { isLive, supabase } from '../lib/supabase';
+import { youtubeIdFromUrl } from '../lib/evidenceMedia';
+import { EvidenceThumb } from '../components/EvidenceThumb';
 
-const REPORT_REASONS = [
-  'doxxing', 'violence', 'targeting', 'sexual', 'minor', 'misinfo', 'offtopic', 'copyright', 'other',
-] as const;
+function igEmbedPath(url: string): string | null {
+  const m = url.match(/\/(reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
+  if (!m) return null;
+  const kind = m[1] === 'p' ? 'p' : m[1] === 'tv' ? 'tv' : 'reel';
+  return `${kind}/${m[2]}`;
+}
 
+/** Height above mobile BottomNav - reels never cover primary nav. */
+const SLIDE_H =
+  'h-[calc(100dvh-3.25rem-env(safe-area-inset-bottom))] md:h-[100dvh]';
+
+/**
+ * Feed = Instagram Explore / Reels. Full-bleed vertical evidence,
+ * snap scroll, poster until embed ready, bottom nav always visible.
+ * Grouped context by open stand / issue. No separate Watch destination.
+ */
 export default function Feed() {
-  const { items, loading, reload } = useFeed();
-  const { stands, counts } = useStands();
-  const { t, lang } = useI18n();
-  const [issue, setIssue] = useState<string>('');
-  const [state, setState] = useState<string>('');
-  const [reporting, setReporting] = useState<FeedItem | null>(null);
-  const [reason, setReason] = useState<string>('');
-  const [reported, setReported] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const issue = isIssueSlug(params.get('issue') ?? '') ? params.get('issue') : null;
+  const state = params.get('state');
+  const startId = params.get('id');
+  const standParam = params.get('stand');
 
-  const filtered = useMemo(
-    () =>
-      items.filter(
-        (i) => (!issue || i.issue === issue) && (!state || i.state === state)
-      ),
-    [items, issue, state]
+  const { t, lang } = useI18n();
+  const { session, signIn } = useAuth();
+  const { stands, joined, requestStand } = useStands();
+
+  const [items, setItems] = useState<FeedItem[]>([]);
+  const [counts, setCounts] = useState<Record<string, ReactionCounts>>({});
+  const [mine, setMine] = useState<Record<string, 'up' | 'down'>>({});
+  const [active, setActive] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [muted, setMuted] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [ready, setReady] = useState<Record<string, boolean>>({});
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const slideRefs = useRef<(HTMLElement | null)[]>([]);
+  const ytIframeRef = useRef<HTMLIFrameElement | null>(null);
+
+  const standForIssue = useCallback(
+    (slug: string) => stands.find((s) => s.category === slug) ?? null,
+    [stands]
   );
 
-  /** Group evidences under matching open stands (by issue category). */
-  const groups = useMemo(() => {
-    const byIssue = new Map<string, FeedItem[]>();
-    for (const item of filtered) {
-      const list = byIssue.get(item.issue) ?? [];
-      list.push(item);
-      byIssue.set(item.issue, list);
-    }
-    const out: { stand: Stand | null; issue: string; items: FeedItem[] }[] = [];
-    for (const stand of stands) {
-      const list = byIssue.get(stand.category);
-      if (list?.length) {
-        out.push({ stand, issue: stand.category, items: list });
-        byIssue.delete(stand.category);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setReady({});
+      const list = await loadEvidence({ issue, state, limit: 80 });
+      if (cancelled) return;
+      let next = list;
+      if (standParam) {
+        const st = stands.find((s) => s.id === standParam);
+        if (st) next = list.filter((i) => i.issue === st.category);
       }
-    }
-    for (const [iss, list] of byIssue) {
-      out.push({ stand: null, issue: iss, items: list });
-    }
-    return out;
-  }, [filtered, stands]);
 
-  const submitReport = async () => {
-    if (!reporting || !reason) return;
-    if (feedLive) await callFeedFn('feed-report', { id: reporting.id, reason });
-    setReported(true);
-    setReporting(null);
-    setReason('');
-    window.setTimeout(() => setReported(false), 4000);
-    if (feedLive) void reload();
+      let startIdx = 0;
+      if (startId) {
+        let idx = next.findIndex((i) => i.id === startId);
+        if (idx < 0) {
+          const orphan = list.find((i) => i.id === startId) ?? (await loadEvidenceById(startId));
+          if (orphan) {
+            next = [orphan, ...next.filter((i) => i.id !== orphan.id)];
+            idx = 0;
+          }
+        }
+        startIdx = idx < 0 ? 0 : idx;
+      }
+
+      setItems(next);
+      setCounts(await loadReactionCounts(next.map((i) => i.id)));
+      setActive(startIdx);
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [issue, state, startId, standParam, stands]);
+
+  useEffect(() => {
+    if (!supabase || !session || items.length === 0) {
+      setMine({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase!
+        .from('feed_item_reactions')
+        .select('feed_item_id,value')
+        .eq('user_id', session.user.id)
+        .in(
+          'feed_item_id',
+          items.map((i) => i.id)
+        );
+      if (cancelled) return;
+      const m: Record<string, 'up' | 'down'> = {};
+      for (const r of data ?? []) {
+        if (r.value === 'up' || r.value === 'down') m[r.feed_item_id as string] = r.value;
+      }
+      setMine(m);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session, items]);
+
+  useEffect(() => {
+    if (loading || items.length === 0) return;
+    const id = requestAnimationFrame(() => {
+      slideRefs.current[active]?.scrollIntoView({ block: 'start' });
+    });
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, items.length]);
+
+  useEffect(() => {
+    const root = scrollerRef.current;
+    if (!root) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        let best: { idx: number; ratio: number } | null = null;
+        for (const e of entries) {
+          const idx = Number((e.target as HTMLElement).dataset.idx);
+          if (!Number.isFinite(idx)) continue;
+          if (!best || e.intersectionRatio > best.ratio) {
+            best = { idx, ratio: e.intersectionRatio };
+          }
+        }
+        if (best && best.ratio >= 0.55) setActive(best.idx);
+      },
+      { root, threshold: [0.4, 0.55, 0.7, 0.85] }
+    );
+    for (const el of slideRefs.current) if (el) obs.observe(el);
+    return () => obs.disconnect();
+  }, [items.length]);
+
+  useEffect(() => {
+    const frame = ytIframeRef.current;
+    if (!frame?.contentWindow) return;
+    const cmd = muted ? 'mute' : 'unMute';
+    try {
+      frame.contentWindow.postMessage(
+        JSON.stringify({ event: 'command', func: cmd, args: [] }),
+        '*'
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [muted, active]);
+
+  const relatedStand = useMemo(() => {
+    const item = items[active];
+    if (!item) return null;
+    return standForIssue(item.issue);
+  }, [items, active, standForIssue]);
+
+  const setFilter = (key: 'issue' | 'state', value: string) => {
+    const next = new URLSearchParams(params);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    next.delete('id');
+    next.delete('stand');
+    setParams(next, { replace: true });
+    setFiltersOpen(false);
   };
 
-  return (
-    <div className="mx-auto max-w-2xl px-4 pt-10">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display font-bold text-3xl text-navy">{t('feed.title')}</h1>
-          <p className="text-sub mt-2">{t('feed.sub')}</p>
-        </div>
-        <div className="flex flex-col gap-2 shrink-0">
-          <Link to="/add" className="btn-primary text-sm !py-2 !px-4">
+  const react = useCallback(
+    async (item: FeedItem, value: 'up' | 'down') => {
+      if (!isLive || !supabase) return;
+      if (!session) {
+        await signIn();
+        return;
+      }
+      setBusyId(item.id);
+      try {
+        const prevValue = mine[item.id];
+        const { error } = await supabase.from('feed_item_reactions').upsert(
+          {
+            user_id: session.user.id,
+            feed_item_id: item.id,
+            value,
+          },
+          { onConflict: 'user_id,feed_item_id' }
+        );
+        if (error) return;
+        setMine((m) => ({ ...m, [item.id]: value }));
+        setCounts((prev) => {
+          const cur = prev[item.id] ?? { ups: 0, downs: 0 };
+          const next = { ...cur };
+          if (prevValue === 'up') next.ups = Math.max(0, next.ups - 1);
+          if (prevValue === 'down') next.downs = Math.max(0, next.downs - 1);
+          if (value === 'up') next.ups += 1;
+          else next.downs += 1;
+          return { ...prev, [item.id]: next };
+        });
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [session, signIn, mine]
+  );
+
+  const report = async (item: FeedItem) => {
+    if (!isLive) return;
+    await callFeedFn('feed-report', { id: item.id, reason: 'other' });
+    setItems((prev) => prev.filter((x) => x.id !== item.id));
+  };
+
+  if (loading) {
+    return (
+      <div className={`${SLIDE_H} bg-navyDeep text-white flex flex-col items-center justify-center gap-3 px-6`}>
+        <div className="w-10 h-10 rounded-full border-2 border-white/30 border-t-saffron animate-spin" aria-hidden />
+        <p className="text-sm text-white/70">{t('misc.loading')}</p>
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className={`${SLIDE_H} bg-bg flex flex-col items-center justify-center px-6 text-center space-y-4`}>
+        <h1 className="font-display font-bold text-2xl text-navy">{t('feed.title')}</h1>
+        <p className="text-sub text-sm max-w-sm">{t('feed.empty')}</p>
+        <div className="flex flex-wrap gap-3 justify-center">
+          <Link to="/add" className="btn-primary">
             + {t('nav.add')}
           </Link>
-          <Link to="/evidence" className="btn-secondary text-sm !py-2 !px-4 text-center">
-            {t('evidence.watchAll')}
-          </Link>
-          <PwaInstallButton className="btn-ghost text-sm !py-2 !px-4" />
-        </div>
-      </div>
-
-      <div className="mt-6 space-y-3">
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
-          <button
-            className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold border transition ${
-              issue === '' ? 'bg-navy text-white border-navy' : 'bg-white text-sub border-line'
-            }`}
-            onClick={() => setIssue('')}
-          >
-            {t('feed.allIssues')}
-          </button>
-          {ISSUES.map((i) => (
+          {(issue || state) && (
             <button
-              key={i.slug}
-              className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold border transition ${
-                issue === i.slug ? 'bg-navy text-white border-navy' : 'bg-white text-sub border-line'
-              }`}
-              onClick={() => setIssue(i.slug)}
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                setParams({}, { replace: true });
+              }}
             >
-              {issueLabel(i.slug, lang)}
+              {t('feed.allIssues')}
             </button>
-          ))}
+          )}
         </div>
-        <select
-          value={state}
-          onChange={(e) => setState(e.target.value)}
-          className="w-full rounded-xl border border-line bg-faint px-4 py-2.5 text-sm"
-          aria-label={t('feed.allStates')}
-        >
-          <option value="">{t('feed.allStates')}</option>
-          {STATES.map((s) => (
-            <option key={s.code} value={s.code}>
-              {stateName(s.code, lang)}
-            </option>
-          ))}
-        </select>
       </div>
+    );
+  }
 
-      {reported && (
-        <p className="mt-6 card p-4 text-sm text-green font-medium">{t('feed.reportSent')}</p>
-      )}
-
-      {loading ? (
-        <p className="mt-10 text-sub">{t('misc.loading')}</p>
-      ) : groups.length === 0 ? (
-        <p className="mt-10 text-sub">{t('feed.empty')}</p>
-      ) : (
-        <div className="mt-8 space-y-10">
-          {groups.map((g) => {
-            const title = g.stand
-              ? lang === 'hi' && g.stand.title_hi
-                ? g.stand.title_hi
-                : g.stand.title
-              : issueLabel(g.issue, lang);
-            const standing = g.stand ? counts[g.stand.id]?.total ?? 0 : 0;
-            return (
-              <section key={g.stand?.id ?? g.issue} className="space-y-4">
-                <div className="flex flex-wrap items-end justify-between gap-3">
-                  <div>
-                    <h2 className="font-display font-semibold text-xl text-navy">{title}</h2>
-                    <p className="text-xs text-sub mt-1">
-                      {fmt(g.items.length)} {t('evidence.clipCount')}
-                      {g.stand ? ` · ${fmt(standing)} ${t('counts.standing')}` : ''}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Link
-                      to={evidenceWatchPath({
-                        issue: g.issue,
-                        state: state || null,
-                        stand: g.stand?.id,
-                        id: g.items[0]?.id,
-                      })}
-                      className="btn-primary text-sm !py-2 !px-4"
-                    >
-                      {t('evidence.watchAll')}
-                    </Link>
-                    {g.stand && (
-                      <Link to={`/stand/${g.stand.id}`} className="btn-secondary text-sm !py-2 !px-4">
-                        {t('stand.standWith')}
-                      </Link>
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-5">
-                  {g.items.map((item) => (
-                    <FeedCard key={item.id} item={item} onReport={setReporting} />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </div>
-      )}
-
-      <p className="mt-8 text-xs text-sub">
-        <Link to="/moderation" className="underline underline-offset-4 hover:text-navy">
-          {t('policy.title')}
-        </Link>
-      </p>
-
-      {reporting && (
-        <div
-          className="fixed inset-0 z-50 bg-navyDeep/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="report-title"
-          onClick={(e) => e.target === e.currentTarget && setReporting(null)}
+  return (
+    <div className={`relative ${SLIDE_H} bg-black text-white overflow-hidden`}>
+      {/* Minimal chrome */}
+      <header className="absolute top-0 inset-x-0 z-50 flex items-center justify-between gap-2 px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 bg-gradient-to-b from-black/75 to-transparent pointer-events-none">
+        <button
+          type="button"
+          className="pointer-events-auto min-h-10 px-3 rounded-full bg-white/10 text-xs font-semibold backdrop-blur"
+          onClick={() => setFiltersOpen((o) => !o)}
         >
-          <div className="card w-full max-w-md p-6 space-y-4">
-            <h2 id="report-title" className="font-display font-semibold text-xl">
-              {t('feed.reportTitle')}
-            </h2>
-            <p className="text-sm text-sub">{t('feed.reportSub')}</p>
-            <div className="space-y-2">
-              {REPORT_REASONS.map((r) => (
-                <label key={r} className="flex items-center gap-3 text-sm cursor-pointer">
-                  <input
-                    type="radio"
-                    name="reason"
-                    value={r}
-                    checked={reason === r}
-                    onChange={() => setReason(r)}
-                    className="w-4 h-4 accent-[#15305E]"
-                  />
-                  <span>{t(`policy.reason.${r}` as 'policy.title')}</span>
-                </label>
+          {issue ? issueLabel(issue, lang) : t('feed.allIssues')}
+          {state ? ` · ${stateName(state, lang)}` : ''}
+        </button>
+        <p className="text-[11px] font-mono truncate text-white/80 max-w-[40%] text-center">
+          {relatedStand
+            ? lang === 'hi' && relatedStand.title_hi
+              ? relatedStand.title_hi
+              : relatedStand.title
+            : items[active]
+              ? issueLabel(items[active].issue, lang)
+              : t('feed.title')}
+        </p>
+        <button
+          type="button"
+          className="pointer-events-auto min-h-10 px-3 rounded-full bg-white/10 text-xs font-semibold backdrop-blur"
+          onClick={() => setMuted((m) => !m)}
+        >
+          {muted ? t('evidence.unmute') : t('evidence.mute')}
+        </button>
+      </header>
+
+      {filtersOpen && (
+        <div
+          className="absolute inset-0 z-[55] bg-black/60 backdrop-blur-sm flex flex-col justify-end pointer-events-auto"
+          onClick={(e) => e.target === e.currentTarget && setFiltersOpen(false)}
+        >
+          <div className="bg-bg text-ink rounded-t-3xl p-5 space-y-4 max-h-[70%] overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+            <div className="flex items-center justify-between">
+              <h2 className="font-display font-semibold text-lg text-navy">{t('feed.title')}</h2>
+              <Link to="/add" className="text-sm font-semibold text-navy underline underline-offset-4">
+                + {t('nav.add')}
+              </Link>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+              <button
+                type="button"
+                className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold border ${
+                  !issue ? 'bg-navy text-white border-navy' : 'bg-white text-sub border-line'
+                }`}
+                onClick={() => setFilter('issue', '')}
+              >
+                {t('feed.allIssues')}
+              </button>
+              {ISSUES.map((i) => (
+                <button
+                  key={i.slug}
+                  type="button"
+                  className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold border ${
+                    issue === i.slug ? 'bg-navy text-white border-navy' : 'bg-white text-sub border-line'
+                  }`}
+                  onClick={() => setFilter('issue', i.slug)}
+                >
+                  {issueLabel(i.slug, lang)}
+                </button>
               ))}
             </div>
-            <div className="flex gap-3 pt-1">
-              <button className="btn-ghost flex-1" onClick={() => setReporting(null)}>
-                {t('join.cancel')}
-              </button>
-              <button className="btn-primary flex-1" onClick={() => void submitReport()} disabled={!reason}>
-                {t('feed.report')}
-              </button>
-            </div>
+            <select
+              value={state ?? ''}
+              onChange={(e) => setFilter('state', e.target.value)}
+              className="w-full rounded-xl border border-line bg-faint px-4 py-2.5 text-sm"
+              aria-label={t('feed.allStates')}
+            >
+              <option value="">{t('feed.allStates')}</option>
+              {STATES.map((s) => (
+                <option key={s.code} value={s.code}>
+                  {stateName(s.code, lang)}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       )}
+
+      <div
+        ref={scrollerRef}
+        className="h-full overflow-y-auto overscroll-y-contain touch-pan-y"
+        style={{ scrollSnapType: 'y mandatory', WebkitOverflowScrolling: 'touch' }}
+      >
+        {items.map((item, idx) => {
+          const isActive = idx === active;
+          const near = Math.abs(idx - active) <= 1;
+          const c = counts[item.id] ?? { ups: 0, downs: 0 };
+          const my = mine[item.id];
+          const yid = item.platform === 'youtube' ? youtubeIdFromUrl(item.url) : null;
+          const igPath = item.platform === 'instagram' ? igEmbedPath(item.url) : null;
+          const embedReady = !!ready[item.id];
+          const stand: Stand | null = standForIssue(item.issue);
+          const stood = !!(stand && joined.has(stand.id));
+
+          return (
+            <section
+              key={item.id}
+              ref={(el) => {
+                slideRefs.current[idx] = el;
+              }}
+              data-idx={idx}
+              className="relative h-full w-full snap-start snap-always flex items-center justify-center bg-black"
+            >
+              <EvidenceThumb
+                item={item}
+                eager={near}
+                className={`absolute inset-0 transition-opacity duration-300 ${
+                  isActive && embedReady && (yid || igPath) ? 'opacity-0' : 'opacity-100'
+                }`}
+              />
+
+              {isActive && yid && (
+                <iframe
+                  ref={ytIframeRef}
+                  className={`absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-200 ${
+                    embedReady ? 'opacity-100' : 'opacity-0'
+                  }`}
+                  src={`https://www.youtube-nocookie.com/embed/${yid}?autoplay=1&rel=0&playsinline=1&modestbranding=1&mute=1&enablejsapi=1&controls=0`}
+                  title={item.title ?? 'YouTube'}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture"
+                  onLoad={() => setReady((r) => ({ ...r, [item.id]: true }))}
+                />
+              )}
+
+              {isActive && igPath && (
+                <iframe
+                  className={`absolute inset-0 w-full h-full bg-transparent pointer-events-none transition-opacity duration-200 ${
+                    embedReady ? 'opacity-100' : 'opacity-0'
+                  }`}
+                  src={`https://www.instagram.com/${igPath}/embed/captioned/`}
+                  title={item.title ?? 'Instagram'}
+                  onLoad={() => setReady((r) => ({ ...r, [item.id]: true }))}
+                />
+              )}
+
+              {isActive && item.platform === 'x' && (
+                <div className="relative z-10 max-w-md mx-auto px-6 text-center space-y-4 pointer-events-auto">
+                  <p className="text-lg leading-snug">{item.title}</p>
+                  <a href={item.url} target="_blank" rel="noreferrer noopener" className="inline-flex btn-secondary text-sm">
+                    {t('evidence.openOriginal')}
+                  </a>
+                </div>
+              )}
+
+              {/* Right-rail actions (thumb-driven) */}
+              <div className="absolute right-3 bottom-36 z-20 flex flex-col items-center gap-3 pointer-events-auto">
+                <button
+                  type="button"
+                  disabled={busyId === item.id}
+                  onClick={() => void react(item, 'up')}
+                  className={`flex flex-col items-center min-w-[3rem] ${
+                    my === 'up' ? 'text-saffron' : 'text-white'
+                  }`}
+                >
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/45 backdrop-blur text-lg font-bold border border-white/20">
+                    ↑
+                  </span>
+                  <span className="mt-1 text-[10px] font-mono tabular-nums">{c.ups}</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={busyId === item.id}
+                  onClick={() => void react(item, 'down')}
+                  className={`flex flex-col items-center min-w-[3rem] ${
+                    my === 'down' ? 'text-saffron' : 'text-white'
+                  }`}
+                >
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/45 backdrop-blur text-lg font-bold border border-white/20">
+                    ↓
+                  </span>
+                  <span className="mt-1 text-[10px] font-mono tabular-nums">{c.downs}</span>
+                </button>
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="flex h-12 w-12 items-center justify-center rounded-full bg-black/45 backdrop-blur text-sm border border-white/20"
+                  aria-label={t('evidence.openOriginal')}
+                >
+                  ↗
+                </a>
+                <button
+                  type="button"
+                  onClick={() => void report(item)}
+                  className="flex h-12 w-12 items-center justify-center rounded-full bg-black/45 backdrop-blur text-[10px] font-semibold border border-white/20"
+                  aria-label={t('feed.report')}
+                >
+                  !
+                </button>
+              </div>
+
+              <div className="absolute inset-x-0 bottom-0 z-20 p-4 pr-16 pb-3 bg-gradient-to-t from-black/95 via-black/55 to-transparent space-y-2.5 pointer-events-auto">
+                <p className="text-[10px] font-mono uppercase tracking-wide text-saffron">
+                  {t('feed.unverified')} · {PLATFORM_LABEL[item.platform]}
+                  {item.state ? ` · ${stateName(item.state, lang)}` : ` · ${t('add.allIndia')}`}
+                </p>
+                <p className="text-sm font-semibold line-clamp-2 leading-snug">
+                  {item.title?.trim() || issueLabel(item.issue, lang)}
+                </p>
+                {stand && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isActive || stood) return;
+                      void requestStand(stand);
+                    }}
+                    disabled={!isActive || stood}
+                    className={`flex items-center justify-center min-h-12 w-full rounded-2xl px-4 py-3 text-base font-bold shadow-lift transition ${
+                      stood
+                        ? 'bg-white/15 text-white border border-white/35 cursor-default'
+                        : 'bg-saffron text-navy'
+                    }`}
+                  >
+                    {stood
+                      ? t('evidence.iStoodUp')
+                      : `${t('evidence.nowStand')}: ${
+                          lang === 'hi' && stand.title_hi ? stand.title_hi : stand.title
+                        }`}
+                  </button>
+                )}
+                <p className="text-center text-[10px] text-white/35">{t('evidence.swipeHint')}</p>
+              </div>
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 }

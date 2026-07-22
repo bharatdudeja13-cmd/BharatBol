@@ -43,8 +43,9 @@ describe('account-linked stands: public wire has no identity', () => {
     expect(src).not.toMatch(/loadReceipts/);
   });
 
-  it('FeedCard routes into /evidence', () => {
+  it('FeedCard routes into Feed reels', () => {
     expect(read('src/components/FeedCard.tsx')).toMatch(/evidenceWatchPath/);
+    expect(read('src/state/useEvidence.ts')).toMatch(/\/feed/);
     expect(read('src/components/FeedCard.tsx')).not.toMatch(/btn-secondary.*Open on/);
   });
 });

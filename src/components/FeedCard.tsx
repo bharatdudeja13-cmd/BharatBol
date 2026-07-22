@@ -7,7 +7,7 @@ import { PLATFORM_LABEL } from '../lib/feedUrl';
 import { evidenceWatchPath } from '../state/useEvidence';
 import { EvidenceThumb } from './EvidenceThumb';
 
-/** Feed list card. Playback always happens in /evidence. */
+/** Feed card / strip entry - playback opens Feed reels (/feed). */
 export function FeedCard({
   item,
   onReport,

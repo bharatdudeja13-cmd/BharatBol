@@ -40,8 +40,8 @@ describe('phase7 geography + public counts', () => {
     expect(create?.[1]).not.toMatch(/user_id/);
   });
 
-  it('EvidencePlayer keeps poster until iframe onLoad', () => {
-    const src = read('src/pages/EvidencePlayer.tsx');
+  it('Feed reels keep poster until iframe onLoad', () => {
+    const src = read('src/pages/Feed.tsx');
     expect(src).toMatch(/onLoad/);
     expect(src).toMatch(/embedReady|ready\[/);
   });

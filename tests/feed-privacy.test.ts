@@ -125,8 +125,8 @@ describe('link + embed, never re-host', () => {
     expect(src).toMatch(/graph\.facebook\.com\/v25\.0\/instagram_oembed/);
   });
 
-  it('YouTube embeds use the privacy-enhanced host in the shared player', () => {
-    const src = read('src/pages/EvidencePlayer.tsx');
+  it('YouTube embeds use the privacy-enhanced host in the Feed player', () => {
+    const src = read('src/pages/Feed.tsx');
     expect(src).toMatch(/youtube-nocookie\.com/);
     expect(read('src/components/FeedCard.tsx')).toMatch(/evidenceWatchPath/);
   });
