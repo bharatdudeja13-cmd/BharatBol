@@ -6,6 +6,7 @@ const en = {
   'app.name': 'BharatBol',
   'app.tagline': 'Bharat, speak.',
   'app.kicker': 'An independent, non-partisan civic square',
+  'flag.alt': 'The national flag of India',
   'app.sub':
     'Whatever party you support — or none — stand on the issues that matter and be counted. Free. Public. Revocable by you.',
   'nav.stands': 'Stands',
@@ -130,6 +131,7 @@ const hi: Record<keyof typeof en, string> = {
   'app.name': 'भारत बोल',
   'app.tagline': 'भारत, बोल।',
   'app.kicker': 'एक स्वतंत्र, गैर-दलीय नागरिक मंच',
+  'flag.alt': 'भारत का राष्ट्रीय ध्वज',
   'app.sub':
     'आप किसी भी दल के समर्थक हों — या किसी के नहीं — जो मुद्दे मायने रखते हैं उन पर खड़े हों और गिने जाएँ। निःशुल्क। सार्वजनिक। आपके हाथ में।',
   'nav.stands': 'मुद्दे',

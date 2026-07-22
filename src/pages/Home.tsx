@@ -7,6 +7,7 @@ import { StandCard } from '../components/StandCard';
 import { SupporterWall } from '../components/SupporterWall';
 import { Tilegram } from '../components/Tilegram';
 import { AshokaChakra } from '../components/AshokaChakra';
+import { NationalFlag } from '../components/NationalFlag';
 import { fmt } from '../lib/format';
 import { stateName } from '../lib/states';
 
@@ -37,7 +38,8 @@ export default function Home() {
   return (
     <div className="mx-auto max-w-5xl px-4">
       {/* Hero */}
-      <section className="pt-14 pb-10 text-center">
+      <section className="pt-10 pb-10 text-center">
+        <NationalFlag className="mb-8" />
         <p className="inline-flex items-center gap-2 text-xs sm:text-sm font-mono uppercase tracking-widest text-sub">
           <AshokaChakra size={16} /> {t('app.kicker')}
         </p>
