@@ -1,0 +1,15 @@
+{
+  "name": "Praja — Where India stands",
+  "short_name": "Praja",
+  "description": "An independent, non-partisan civic square where any Indian citizen can stand on an issue and be counted.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F3F5F9",
+  "theme_color": "#15305E",
+  "lang": "en",
+  "icons": [
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icons/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,57 @@
+import { Link, NavLink } from 'react-router-dom';
+import { BrandMark } from './AshokaChakra';
+import { useI18n } from '../lib/i18n';
+import { useAuth } from '../state/AuthProvider';
+import { isLive } from '../lib/supabase';
+
+export function Header() {
+  const { t, lang, setLang } = useI18n();
+  const { session, signIn, signOut } = useAuth();
+
+  const navCls = ({ isActive }: { isActive: boolean }) =>
+    `btn-ghost text-sm ${isActive ? 'text-navy underline underline-offset-8 decoration-saffron decoration-2' : 'text-sub'}`;
+
+  return (
+    <header className="sticky top-0 z-40 bg-bg/90 backdrop-blur border-b border-line">
+      <div className="mx-auto max-w-5xl px-4 h-16 flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2.5 mr-auto" aria-label="Praja home">
+          <BrandMark size={36} />
+          <span className="font-display font-semibold text-xl tracking-tight">{t('app.name')}</span>
+        </Link>
+
+        <nav className="flex items-center gap-1" aria-label="Main">
+          <NavLink to="/stands" className={navCls}>
+            {t('nav.stands')}
+          </NavLink>
+          <NavLink to="/about" className={navCls}>
+            {t('nav.about')}
+          </NavLink>
+          {session && (
+            <NavLink to="/me" className={navCls}>
+              {t('nav.profile')}
+            </NavLink>
+          )}
+        </nav>
+
+        <button
+          className="btn-ghost text-sm font-mono px-3"
+          onClick={() => setLang(lang === 'en' ? 'hi' : 'en')}
+          aria-label={lang === 'en' ? 'हिन्दी में देखें' : 'View in English'}
+        >
+          {lang === 'en' ? 'हिं' : 'EN'}
+        </button>
+
+        {isLive &&
+          (session ? (
+            <button className="btn-ghost text-sm text-sub" onClick={() => void signOut()}>
+              {t('nav.signOut')}
+            </button>
+          ) : (
+            <button className="btn-secondary text-sm !min-h-[40px] !px-4 !py-1.5" onClick={() => void signIn()}>
+              {t('nav.signIn')}
+            </button>
+          ))}
+      </div>
+    </header>
+  );
+}
