@@ -8,7 +8,8 @@ guardrails live in the [README](../README.md); the privacy design is in
 
 1. Create a free project at [supabase.com](https://supabase.com).
 2. Open the **SQL editor** and run [`supabase/schema.sql`](../supabase/schema.sql), then
-   [`supabase/phase2_privacy.sql`](../supabase/phase2_privacy.sql), once each, in that order.
+   [`supabase/phase2_privacy.sql`](../supabase/phase2_privacy.sql), then
+   [`supabase/phase2b_public_log.sql`](../supabase/phase2b_public_log.sql), once each, in that order.
 3. Generate the registrar key pair and deploy the Edge Functions:
    ```bash
    node scripts/generate-registrar-key.mjs   # prints public + private JWK
@@ -42,7 +43,16 @@ cp .env.example .env   # fill VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_SI
 - `public/_redirects` already routes all paths to the SPA. Cloudflare’s CDN absorbs read traffic;
   only writes and realtime touch Supabase — which is what keeps millions of viewers free.
 
-## 4. Verify end-to-end
+## 4. Merkle checkpoints (tamper-evidence)
+
+Add two GitHub Actions secrets — `SUPABASE_URL` and `SUPABASE_ANON_KEY` (the
+publishable key; it is public by design) — and the
+[checkpoint workflow](../.github/workflows/checkpoint.yml) will commit a Merkle root
+over the public ballot log to `checkpoints/roots.jsonl` every 6 hours. Trigger the
+first run manually (Actions → Merkle checkpoint → Run workflow). Verification
+instructions for anyone: [checkpoints/README.md](../checkpoints/README.md).
+
+## 5. Verify end-to-end
 
 Sign in on the deployed site, stand on an issue, and confirm: the count bumps live in a second
 browser, your name appears on the wall (if opted in), withdrawal decrements the count, and

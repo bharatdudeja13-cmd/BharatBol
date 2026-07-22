@@ -1,0 +1,49 @@
+# Scheduled Merkle checkpoints over the public ballot log.
+#
+# Every 6 hours (and on demand) this recomputes the Merkle root over the
+# append-only ballot_log and commits it to checkpoints/roots.jsonl.
+# Because the roots live in git — public at launch — the operator cannot
+# quietly rewrite history: any truncation or edit of the log breaks
+# verification against roots that are already committed and mirrored in
+# everyone's clones.
+#
+# Setup: repo → Settings → Secrets and variables → Actions →
+#   SUPABASE_URL       = https://<project-ref>.supabase.co
+#   SUPABASE_ANON_KEY  = sb_publishable_... (public-by-design key)
+name: Merkle checkpoint
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  checkpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build checkpoint from the public ballot log
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: node scripts/checkpoint.mjs --append checkpoints/roots.jsonl
+
+      - name: Commit the new root (skipped when the log has not grown)
+        run: |
+          if git diff --quiet; then
+            echo "no new events — nothing to commit"
+            exit 0
+          fi
+          git config user.name "bharatbol-checkpoint[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add checkpoints/roots.jsonl
+          git commit -m "checkpoint: $(tail -1 checkpoints/roots.jsonl | node -e 'const c=JSON.parse(require("fs").readFileSync(0));console.log(`size=${c.size} root=${c.root.slice(0,16)}…`)')"
+          git push

@@ -43,6 +43,7 @@ The whole product rests on a few small pieces. If you audit anything, audit thes
 | [`tests/unlinkability.test.ts`](tests/unlinkability.test.ts) | **The acceptance gate**: automated assertions that no query path yields account↔ballot, the registrar ledger is sealed, erasure cascades, and a simulated curious registrar fails to link receipts to accounts. Run with `npm test`. |
 | [`src/lib/blind.ts`](src/lib/blind.ts) + [`src/state/StandsProvider.tsx`](src/state/StandsProvider.tsx) | Client protocol: blind → issue → finalize → cast **without a user JWT**. Receipts (the only proof of your own ballots) live in the browser, exportable/importable from the profile page. |
 | [`src/lib/cards.ts`](src/lib/cards.ts) | Share cards are drawn entirely client-side; nothing is uploaded. |
+| [`supabase/phase2b_public_log.sql`](supabase/phase2b_public_log.sql) + [`checkpoints/`](checkpoints/) | Tamper-evidence: every cast/withdrawal is mirrored into an append-only, anonymous public log; scheduled Merkle roots over it are committed to this repo. `scripts/recount.mjs` lets anyone reproduce every displayed number from the public log; `scripts/prove-inclusion.mjs` lets a citizen prove their own anonymous ballot is counted. Tamper-evident, not tamper-proof — and we say so. |
 
 **Honest limits** (also on the About page): the database stores no account↔stand link — that is
 now enforced by schema and tests, and it is why the national headline counts *stands taken*
