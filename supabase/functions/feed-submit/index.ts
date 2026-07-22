@@ -1,15 +1,11 @@
 /**
- * feed-submit — a citizen submits a link. Nothing here can publish.
+ * feed-submit — a citizen submits a link.
  *
- * Pre-checks, in order: authenticated caller → supported/canonical URL →
- * per-account rate limit → global dedup → official oEmbed metadata →
- * conservative keyword pre-screen (sets `flagged` to PRIORITISE human
- * review; it never approves and never rejects) → insert as 'pending'.
- *
- * Privacy: the account id is recorded ONLY in the sealed
- * submission_ledger (anti-abuse, dedup, takedown). feed_items has no
- * submitter column, so the public feed cannot expose or infer who
- * submitted anything.
+ * TEMPORARY publish policy (human-approved): items land as `approved`
+ * immediately so evidence is visible without a moderator round-trip.
+ * Safety that remains: share-tag scrub, sealed ledger, keyword `flagged`,
+ * report → `re_review` hide, unverified label, never re-host.
+ * Flip the insert status back to `pending` to restore human-before-public.
  */
 import { adminClient, json, preflight } from '../_shared/common.ts';
 import { parseSocialUrl } from '../_shared/feedUrl.ts';
@@ -137,7 +133,11 @@ Deno.serve(async (req) => {
       thumbnail_url: meta.thumbnail_url ?? null,
       issue: body.issue,
       state,
-      status: 'pending', // the ONLY status this function can write
+      // TEMPORARY (human-approved): auto-publish so evidence lands immediately.
+      // Report → re_review still hides; flagged still prioritises /admin.
+      // Flip back to 'pending' to restore human-before-public.
+      status: 'approved',
+      approved_at: new Date().toISOString(),
       flagged,
     })
     .select('id')
@@ -150,5 +150,5 @@ Deno.serve(async (req) => {
     url_canon: parsed.canon,
   });
 
-  return json({ ok: true, status: 'pending' });
+  return json({ ok: true, status: 'approved' });
 });

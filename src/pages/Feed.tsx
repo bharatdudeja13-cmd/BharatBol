@@ -6,6 +6,8 @@ import { useI18n } from '../lib/i18n';
 import { ISSUES, issueLabel } from '../config/issues';
 import { STATES, stateName } from '../lib/states';
 import { FeedCard } from '../components/FeedCard';
+import { EvidenceStrip } from '../components/EvidenceStrip';
+import { evidenceWatchPath } from '../state/useEvidence';
 import type { FeedItem } from '../lib/types';
 
 const REPORT_REASONS = [
@@ -53,9 +55,17 @@ export default function Feed() {
           <h1 className="font-display font-bold text-3xl text-navy">{t('feed.title')}</h1>
           <p className="text-sub mt-2">{t('feed.sub')}</p>
         </div>
-        <Link to="/add" className="btn-primary text-sm !py-2 !px-4 shrink-0">
-          + {t('nav.add')}
-        </Link>
+        <div className="flex flex-col gap-2 shrink-0">
+          <Link to="/add" className="btn-primary text-sm !py-2 !px-4">
+            + {t('nav.add')}
+          </Link>
+          <Link
+            to={evidenceWatchPath({ issue: issue || null, state: state || null })}
+            className="btn-secondary text-sm !py-2 !px-4 text-center"
+          >
+            {t('evidence.watchAll')}
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
@@ -95,6 +105,16 @@ export default function Feed() {
           ))}
         </select>
       </div>
+
+      {(issue || state) && (
+        <div className="mt-6">
+          <EvidenceStrip
+            items={filtered.slice(0, 24)}
+            issue={issue || null}
+            state={state || null}
+          />
+        </div>
+      )}
 
       {/* Loop-back to counted action */}
       {relatedStand && (

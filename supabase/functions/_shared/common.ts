@@ -30,8 +30,18 @@ export function ballotMessage(standId: string, tokenHex: string): Uint8Array {
   return new TextEncoder().encode(`bharatbol:ballot:v1:${standId}:${tokenHex}`);
 }
 
+/** Distinct domain from stand ballots — tokens are not interchangeable. */
+export function reactMessage(feedItemId: string, tokenHex: string): Uint8Array {
+  return new TextEncoder().encode(`bharatbol:feedreact:v1:${feedItemId}:${tokenHex}`);
+}
+
 export async function nullifierOf(standId: string, tokenHex: string): Promise<string> {
   const d = await crypto.subtle.digest('SHA-256', ballotMessage(standId, tokenHex));
+  return Array.from(new Uint8Array(d), (x) => x.toString(16).padStart(2, '0')).join('');
+}
+
+export async function reactNullifierOf(feedItemId: string, tokenHex: string): Promise<string> {
+  const d = await crypto.subtle.digest('SHA-256', reactMessage(feedItemId, tokenHex));
   return Array.from(new Uint8Array(d), (x) => x.toString(16).padStart(2, '0')).join('');
 }
 

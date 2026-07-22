@@ -10,8 +10,9 @@ guardrails live in the [README](../README.md); the privacy design is in
 2. Open the **SQL editor** and run [`supabase/schema.sql`](../supabase/schema.sql), then
    [`supabase/phase2_privacy.sql`](../supabase/phase2_privacy.sql), then
    [`supabase/phase2b_public_log.sql`](../supabase/phase2b_public_log.sql),
-   [`supabase/phase3_polls.sql`](../supabase/phase3_polls.sql) and
-   [`supabase/phase4_feed.sql`](../supabase/phase4_feed.sql), once each, in that order.
+   [`supabase/phase3_polls.sql`](../supabase/phase3_polls.sql),
+   [`supabase/phase4_feed.sql`](../supabase/phase4_feed.sql) and
+   [`supabase/phase5_feed_reactions.sql`](../supabase/phase5_feed_reactions.sql), once each, in that order.
 3. Generate the registrar key pair and deploy the Edge Functions:
    ```bash
    node scripts/generate-registrar-key.mjs   # prints public + private JWK
@@ -22,10 +23,13 @@ guardrails live in the [README](../README.md); the privacy design is in
    supabase functions deploy ballot-cast ballot-withdraw --no-verify-jwt
    supabase functions deploy feed-submit feed-moderate
    supabase functions deploy feed-report --no-verify-jwt
+   supabase functions deploy react-issue
+   supabase functions deploy react-cast react-withdraw --no-verify-jwt
    ```
    `feed-report` is intentionally unauthenticated: original creators and affected
    people may have no account, and a takedown route that requires a login is not a
    real takedown route. `feed-submit` and `feed-moderate` both require a user JWT.
+   `react-cast` / `react-withdraw` are anonymous (blind signature only), same as ballots.
 
    Moderators are rows in the sealed `admins` table — add yourself once:
    ```sql

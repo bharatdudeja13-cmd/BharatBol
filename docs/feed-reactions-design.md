@@ -1,6 +1,6 @@
 # Feed reactions — design (like / dislike / comment)
 
-**Status: design gate — do not wire UI or schema until this is approved.**
+**Status: approved and building** (`phase5_feed_reactions.sql` + Edge Functions + player UI).
 
 BharatBol’s feed already promises: **the public never sees who submitted an item**,
 and share tags that could fingerprint a sharer are stripped before storage. Any
