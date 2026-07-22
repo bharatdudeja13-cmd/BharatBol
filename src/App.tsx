@@ -68,14 +68,18 @@ function JoinErrorToast() {
   );
 }
 
+/** Space reserved for mobile BottomNav so Watch reels never cover it. */
+const NAV_PAD = 'pb-[calc(3.25rem+env(safe-area-inset-bottom))] md:pb-8';
+
 function Shell() {
   const { pathname } = useLocation();
-  const immersive = pathname.startsWith('/evidence');
+  // Watch is reels-style: hide chrome header/footer, keep BottomNav always.
+  const watch = pathname.startsWith('/evidence');
 
   return (
     <div className="min-h-screen flex flex-col">
-      {!immersive && <Header />}
-      <main className={immersive ? 'flex-1' : 'flex-1 pb-24 md:pb-8'}>
+      {!watch && <Header />}
+      <main className={`flex-1 ${watch ? `min-h-0 ${NAV_PAD}` : NAV_PAD}`}>
         <ErrorBoundary>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -94,8 +98,8 @@ function Shell() {
           </Routes>
         </ErrorBoundary>
       </main>
-      {!immersive && <Footer />}
-      {!immersive && <BottomNav />}
+      {!watch && <Footer />}
+      <BottomNav />
     </div>
   );
 }

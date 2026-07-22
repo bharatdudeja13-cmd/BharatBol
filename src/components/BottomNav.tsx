@@ -14,7 +14,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-line bg-bg/95 backdrop-blur pb-[env(safe-area-inset-bottom)]"
+      className="md:hidden fixed bottom-0 inset-x-0 z-[60] border-t border-line bg-bg/95 backdrop-blur pb-[env(safe-area-inset-bottom)]"
       aria-label="Primary"
     >
       <div className="flex items-stretch max-w-lg mx-auto">

@@ -1,11 +1,10 @@
 import { Link } from 'react-router-dom';
-import { evidencePoster } from '../lib/evidenceMedia';
 import type { FeedItem } from '../lib/types';
 import { useI18n } from '../lib/i18n';
 import { issueLabel } from '../config/issues';
 import { stateName } from '../lib/states';
 import { evidenceWatchPath } from '../state/useEvidence';
-import { PLATFORM_LABEL } from '../lib/feedUrl';
+import { EvidenceThumb } from './EvidenceThumb';
 
 function scopeOf(item: FeedItem): 'state' | 'national' {
   return item.scope ?? (item.state ? 'state' : 'national');
@@ -79,9 +78,8 @@ export function EvidenceStrip({
       </div>
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory">
         {items.map((item) => {
-          const src = evidencePoster(item);
           const national = scopeOf(item) === 'national';
-          const label = item.title || issueLabel(item.issue, lang);
+          const label = item.title?.trim() || issueLabel(item.issue, lang);
           return (
             <Link
               key={item.id}
@@ -92,17 +90,7 @@ export function EvidenceStrip({
               })}
               className="snap-start shrink-0 w-36 sm:w-40 rounded-2xl overflow-hidden border border-line bg-faint"
             >
-              <div className="relative aspect-[9/16] bg-gradient-to-b from-navyDeep to-[#0a1628]">
-                {src ? (
-                  <img src={src} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-3 text-center text-white/85">
-                    <span className="text-[10px] font-mono uppercase tracking-wider">
-                      {PLATFORM_LABEL[item.platform]}
-                    </span>
-                    <span className="text-xs font-semibold line-clamp-4 leading-snug">{label}</span>
-                  </div>
-                )}
+              <EvidenceThumb item={item} className="aspect-[9/16]">
                 <span className="absolute bottom-2 left-2 right-2 text-[10px] font-mono text-white drop-shadow-md">
                   {issueLabel(item.issue, lang)}
                   {national
@@ -111,7 +99,7 @@ export function EvidenceStrip({
                       ? ` · ${stateName(item.state, lang)}`
                       : ''}
                 </span>
-              </div>
+              </EvidenceThumb>
               <p className="p-2 text-xs line-clamp-2 text-ink">{label}</p>
             </Link>
           );

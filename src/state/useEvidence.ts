@@ -89,6 +89,22 @@ export async function loadEvidence(filters: EvidenceFilters = {}): Promise<FeedI
   return sortEvidenceForState(list, filters.state).slice(0, filters.limit ?? 40);
 }
 
+/** Fetch one approved item by id (ensures Watch deep-links open the right clip). */
+export async function loadEvidenceById(id: string): Promise<FeedItem | null> {
+  if (!id) return null;
+  if (!supabase) return DEMO_FEED.find((i) => i.id === id) ?? null;
+  const select =
+    'id,url,platform,title,author_name,thumbnail_url,issue,state,scope,status,submitted_on,approved_at';
+  const { data, error } = await supabase
+    .from('feed_items')
+    .select(select)
+    .eq('id', id)
+    .eq('status', 'approved')
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as FeedItem;
+}
+
 export async function loadReactionCounts(ids: string[]): Promise<Record<string, ReactionCounts>> {
   const out: Record<string, ReactionCounts> = {};
   if (ids.length === 0) return out;

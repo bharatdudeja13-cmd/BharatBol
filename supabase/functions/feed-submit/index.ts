@@ -30,8 +30,17 @@ const STATE_CODES = new Set([
   'WB','AS','ML','NL','MN','TR','MZ','MH','GA','TS','OD','KA','AP','TN','KL',
 ]);
 
-/** Official oEmbed only. No scraping, ever; failure is non-fatal. */
-async function fetchMeta(platform: string, canon: string) {
+/**
+ * Public metadata only — no HTML scraping, never re-host bytes.
+ * Instagram: token-free. Prefer Meta's tokenless oEmbed (June 2026+) plus
+ * Instagram's public `/p/{id}/media/?size=l` poster (stable redirect to JPEG).
+ * Optional INSTAGRAM_OEMBED_TOKEN still works if set, but is not required.
+ */
+async function fetchMeta(
+  platform: string,
+  canon: string,
+  id: string
+): Promise<{ title?: string; author_name?: string; thumbnail_url?: string }> {
   try {
     if (platform === 'youtube') {
       const r = await fetch(
@@ -51,16 +60,52 @@ async function fetchMeta(platform: string, canon: string) {
       const text = String(d.html ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
       return { title: text.slice(0, 280), author_name: d.author_name };
     }
-    // Instagram oEmbed needs a Facebook app token. Without one we keep the
-    // titled link-card and do NOT scrape. See docs/content-feed-design.md.
-    const token = Deno.env.get('INSTAGRAM_OEMBED_TOKEN');
-    if (platform === 'instagram' && token) {
-      const r = await fetch(
-        `https://graph.facebook.com/v19.0/instagram_oembed?url=${encodeURIComponent(canon)}&access_token=${token}`
-      );
-      if (!r.ok) return {};
-      const d = await r.json();
-      return { title: d.title, author_name: d.author_name, thumbnail_url: d.thumbnail_url };
+    if (platform === 'instagram') {
+      // Stable public poster — works for reel/post/tv shortcodes via /p/ path.
+      const publicPoster = `https://www.instagram.com/p/${id}/media/?size=l`;
+      let title: string | undefined;
+      let author_name: string | undefined;
+      let thumbnail_url: string | undefined = publicPoster;
+
+      // Confirm the public media endpoint returns an image (follow redirects).
+      try {
+        const img = await fetch(publicPoster, {
+          redirect: 'follow',
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
+            Accept: 'image/*,*/*',
+          },
+        });
+        const ct = img.headers.get('content-type') ?? '';
+        if (!img.ok || !ct.startsWith('image/')) {
+          thumbnail_url = undefined;
+        }
+      } catch {
+        thumbnail_url = undefined;
+      }
+
+      // Tokenless Instagram oEmbed (no app review). Token optional for higher limits.
+      const token = Deno.env.get('INSTAGRAM_OEMBED_TOKEN');
+      const oembedUrl = token
+        ? `https://graph.facebook.com/v25.0/instagram_oembed?url=${encodeURIComponent(canon)}&access_token=${token}`
+        : `https://graph.facebook.com/v25.0/instagram_oembed?url=${encodeURIComponent(canon)}`;
+      try {
+        const r = await fetch(oembedUrl);
+        if (r.ok) {
+          const d = await r.json();
+          if (d.title) title = String(d.title).slice(0, 280);
+          if (d.author_name) author_name = String(d.author_name);
+          // thumbnail_url was removed from oEmbed (Nov 2025); keep public poster.
+          if (d.thumbnail_url) thumbnail_url = String(d.thumbnail_url);
+        }
+      } catch {
+        /* oEmbed optional */
+      }
+
+      // Readable fallback title so cards never look empty.
+      if (!title) title = `Instagram · ${id}`;
+      return { title, author_name, thumbnail_url };
     }
   } catch {
     // Metadata is a nicety; submission still proceeds.
@@ -127,7 +172,7 @@ Deno.serve(async (req) => {
     return json({ ok: true, duplicate: true, status: existing.status });
   }
 
-  const meta = await fetchMeta(parsed.platform, parsed.canon);
+  const meta = await fetchMeta(parsed.platform, parsed.canon, parsed.id);
   const haystack = `${meta.title ?? ''} ${meta.author_name ?? ''}`.toLowerCase();
   const flagged = PRESCREEN.some((w) => haystack.includes(w));
 

@@ -5,6 +5,7 @@ import { useStands } from '../state/StandsProvider';
 import { callFeedFn } from '../state/useFeed';
 import {
   loadEvidence,
+  loadEvidenceById,
   loadReactionCounts,
   type ReactionCounts,
 } from '../state/useEvidence';
@@ -15,22 +16,24 @@ import { PLATFORM_LABEL } from '../lib/feedUrl';
 import type { FeedItem, Stand } from '../lib/types';
 import { isLive, supabase } from '../lib/supabase';
 import { fmt } from '../lib/format';
-import { evidencePoster } from '../lib/evidenceMedia';
+import { youtubeIdFromUrl } from '../lib/evidenceMedia';
+import { EvidenceThumb } from '../components/EvidenceThumb';
 
-function ytId(url: string): string | null {
-  try {
-    return new URL(url).searchParams.get('v');
-  } catch {
-    return null;
-  }
+function igEmbedPath(url: string): string | null {
+  const m = url.match(/\/(reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
+  if (!m) return null;
+  const kind = m[1] === 'p' ? 'p' : m[1] === 'tv' ? 'tv' : 'reel';
+  return `${kind}/${m[2]}`;
 }
 
-function igId(url: string): string | null {
-  const m = url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
-  return m?.[1] ?? null;
-}
+/** Height above mobile BottomNav so reels never cover primary nav. */
+const SLIDE_H =
+  'h-[calc(100dvh-3.25rem-env(safe-area-inset-bottom))] md:h-[100dvh]';
 
-/** Full-viewport shorts player. Iframes are pointer-events-none so vertical scroll works. */
+/**
+ * Instagram/FB-style vertical reels. Bottom nav stays visible (App shell).
+ * Iframes are pointer-events-none so vertical swipe reaches the scroller.
+ */
 export default function EvidencePlayer() {
   const [params] = useSearchParams();
   const issue = isIssueSlug(params.get('issue') ?? '') ? params.get('issue') : null;
@@ -50,7 +53,7 @@ export default function EvidencePlayer() {
   const [muted, setMuted] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [ready, setReady] = useState<Record<string, boolean>>({});
-  const [browsing, setBrowsing] = useState(!startId);
+  const [browsing, setBrowsing] = useState(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLElement | null)[]>([]);
   const ytIframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -72,11 +75,26 @@ export default function EvidencePlayer() {
         const st = stands.find((s) => s.id === standParam);
         if (st) next = list.filter((i) => i.issue === st.category);
       }
+
+      // Deep-link: always open the requested clip (prepend if filters missed it).
+      let startIdx = 0;
+      if (startId) {
+        let idx = next.findIndex((i) => i.id === startId);
+        if (idx < 0) {
+          const orphan = list.find((i) => i.id === startId) ?? (await loadEvidenceById(startId));
+          if (orphan) {
+            next = [orphan, ...next.filter((i) => i.id !== orphan.id)];
+            idx = 0;
+          }
+        }
+        startIdx = idx < 0 ? 0 : idx;
+      }
+
       setItems(next);
       setCounts(await loadReactionCounts(next.map((i) => i.id)));
-      const idx = startId ? Math.max(0, next.findIndex((i) => i.id === startId)) : 0;
-      setActive(idx < 0 ? 0 : idx);
-      setBrowsing(!startId && !standParam);
+      setActive(startIdx);
+      // Watch tab = reels by default (Instagram/FB explore). Browse is optional.
+      setBrowsing(false);
       setLoading(false);
     })();
     return () => {
@@ -113,9 +131,12 @@ export default function EvidencePlayer() {
 
   useEffect(() => {
     if (loading || browsing || items.length === 0) return;
-    slideRefs.current[active]?.scrollIntoView({ block: 'start' });
+    const id = requestAnimationFrame(() => {
+      slideRefs.current[active]?.scrollIntoView({ block: 'start' });
+    });
+    return () => cancelAnimationFrame(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, browsing]);
+  }, [loading, browsing, items.length]);
 
   useEffect(() => {
     if (browsing) return;
@@ -220,7 +241,7 @@ export default function EvidencePlayer() {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-40 bg-navyDeep text-white flex items-center justify-center">
+      <div className={`${SLIDE_H} bg-navyDeep text-white flex items-center justify-center`}>
         {t('misc.loading')}
       </div>
     );
@@ -240,11 +261,15 @@ export default function EvidencePlayer() {
 
   if (browsing) {
     return (
-      <div className="min-h-screen bg-bg pb-24">
+      <div className="min-h-[70vh] bg-bg">
         <header className="sticky top-0 z-30 bg-bg/95 backdrop-blur border-b border-line px-4 py-3 flex items-center gap-3">
-          <Link to="/feed" className="text-sm font-semibold text-navy">
-            ← {t('misc.back')}
-          </Link>
+          <button
+            type="button"
+            className="text-sm font-semibold text-navy"
+            onClick={() => setBrowsing(false)}
+          >
+            ← {t('evidence.watchAll')}
+          </button>
           <h1 className="font-display font-bold text-lg text-navy flex-1">{t('evidence.title')}</h1>
         </header>
         <div className="mx-auto max-w-2xl px-4 pt-6 space-y-8">
@@ -275,7 +300,6 @@ export default function EvidencePlayer() {
                 <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
                   {g.items.map((item) => {
                     const idx = items.findIndex((x) => x.id === item.id);
-                    const img = evidencePoster(item);
                     return (
                       <button
                         key={item.id}
@@ -283,16 +307,7 @@ export default function EvidencePlayer() {
                         onClick={() => openAt(idx)}
                         className="snap-start shrink-0 w-36 rounded-2xl overflow-hidden border border-line bg-faint text-left"
                       >
-                        <div className="relative aspect-[9/16] bg-navyDeep">
-                          {img ? (
-                            <img src={img} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                          ) : (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-3 text-center text-white/80">
-                              <span className="text-xs font-mono">{PLATFORM_LABEL[item.platform]}</span>
-                              <span className="text-[11px] line-clamp-3">{item.title || issueLabel(item.issue, lang)}</span>
-                            </div>
-                          )}
-                        </div>
+                        <EvidenceThumb item={item} className="aspect-[9/16]" />
                       </button>
                     );
                   })}
@@ -306,7 +321,7 @@ export default function EvidencePlayer() {
   }
 
   return (
-    <div className="fixed inset-0 z-40 bg-black text-white">
+    <div className={`relative ${SLIDE_H} bg-black text-white overflow-hidden`}>
       <header className="absolute top-0 inset-x-0 z-50 flex items-center justify-between gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 bg-gradient-to-b from-black/70 to-transparent pointer-events-none">
         <button
           type="button"
@@ -339,9 +354,8 @@ export default function EvidencePlayer() {
           const near = Math.abs(idx - active) <= 1;
           const c = counts[item.id] ?? { ups: 0, downs: 0 };
           const my = mine[item.id];
-          const yid = item.platform === 'youtube' ? ytId(item.url) : null;
-          const iid = item.platform === 'instagram' ? igId(item.url) : null;
-          const img = evidencePoster(item);
+          const yid = item.platform === 'youtube' ? youtubeIdFromUrl(item.url) : null;
+          const igPath = item.platform === 'instagram' ? igEmbedPath(item.url) : null;
           const embedReady = !!ready[item.id];
 
           return (
@@ -351,27 +365,16 @@ export default function EvidencePlayer() {
                 slideRefs.current[idx] = el;
               }}
               data-idx={idx}
-              className="relative h-[100dvh] w-full snap-start snap-always flex items-center justify-center bg-black"
+              className="relative h-full w-full snap-start snap-always flex items-center justify-center bg-black"
             >
-              {/* Poster always under; never black while loading */}
-              {img ? (
-                <img
-                  src={img}
-                  alt=""
-                  className={`absolute inset-0 w-full h-full object-cover transition-opacity ${
-                    isActive && embedReady && (yid || iid) ? 'opacity-0' : 'opacity-90'
-                  }`}
-                  loading={near ? 'eager' : 'lazy'}
-                />
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-navyDeep to-black px-6 text-center">
-                  <p className="text-sm font-mono text-white/70">{PLATFORM_LABEL[item.platform]}</p>
-                  <p className="text-base font-semibold line-clamp-4">
-                    {item.title || issueLabel(item.issue, lang)}
-                  </p>
-                  {item.state && <p className="text-xs text-white/50">{stateName(item.state, lang)}</p>}
-                </div>
-              )}
+              {/* Poster under embed - never empty black while loading */}
+              <EvidenceThumb
+                item={item}
+                eager={near}
+                className={`absolute inset-0 transition-opacity ${
+                  isActive && embedReady && (yid || igPath) ? 'opacity-0' : 'opacity-100'
+                }`}
+              />
 
               {/* pointer-events-none so vertical swipe reaches the scroller */}
               {isActive && yid && (
@@ -387,12 +390,12 @@ export default function EvidencePlayer() {
                 />
               )}
 
-              {isActive && iid && (
+              {isActive && igPath && (
                 <iframe
                   className={`absolute inset-0 w-full h-full bg-transparent pointer-events-none transition-opacity duration-200 ${
                     embedReady ? 'opacity-100' : 'opacity-0'
                   }`}
-                  src={`https://www.instagram.com/reel/${iid}/embed/captioned/`}
+                  src={`https://www.instagram.com/${igPath}/embed/captioned/`}
                   title={item.title ?? 'Instagram'}
                   onLoad={() => setReady((r) => ({ ...r, [item.id]: true }))}
                 />
@@ -407,13 +410,13 @@ export default function EvidencePlayer() {
                 </div>
               )}
 
-              <div className="absolute inset-x-0 bottom-0 z-20 p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-black/90 via-black/50 to-transparent space-y-3 pointer-events-auto">
+              <div className="absolute inset-x-0 bottom-0 z-20 p-4 pb-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent space-y-3 pointer-events-auto">
                 <p className="text-[11px] font-mono uppercase tracking-wide text-saffron">
                   {t('feed.unverified')} · {PLATFORM_LABEL[item.platform]}
                   {item.state ? ` · ${stateName(item.state, lang)}` : ` · ${t('add.allIndia')}`}
                 </p>
                 <p className="text-sm font-semibold line-clamp-2">
-                  {item.title || issueLabel(item.issue, lang)}
+                  {item.title?.trim() || issueLabel(item.issue, lang)}
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
                   <button
