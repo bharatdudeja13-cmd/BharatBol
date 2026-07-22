@@ -7,9 +7,24 @@ export const SUPABASE_URL = url ?? '';
 /** The anon key is public by design; ballot casts send ONLY this (never a user JWT). */
 export const SUPABASE_ANON_KEY = anon ?? '';
 
-/** Null when env is not configured — the app then runs in local demo mode. */
+/**
+ * Persist session in localStorage; PKCE + detectSessionInUrl so Google
+ * redirect `?code=` is exchanged on return. redirectTo must use the
+ * visitor's current origin (see AuthProvider) and that origin must be
+ * listed under Supabase Auth → Redirect URLs.
+ */
 export const supabase: SupabaseClient | null =
-  url && anon ? createClient(url, anon) : null;
+  url && anon
+    ? createClient(url, anon, {
+        auth: {
+          flowType: 'pkce',
+          detectSessionInUrl: true,
+          persistSession: true,
+          autoRefreshToken: true,
+          storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+        },
+      })
+    : null;
 
 export const isLive = supabase !== null;
 
@@ -26,6 +41,7 @@ const isLocalHost =
  */
 export const configError: boolean = !isLive && import.meta.env.PROD && !isLocalHost;
 
+/** Canonical public site URL (OG, docs). OAuth redirectTo uses window.location.origin. */
 export const SITE_URL: string =
   (import.meta.env.VITE_SITE_URL as string | undefined) ||
   (typeof window !== 'undefined' ? window.location.origin : 'https://bharatbol.pages.dev');

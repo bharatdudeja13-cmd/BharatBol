@@ -6,6 +6,8 @@ import { AuthProvider } from './state/AuthProvider';
 import { StandsProvider } from './state/StandsProvider';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
+import { BottomNav } from './components/BottomNav';
+import { PwaNudge } from './components/PwaNudge';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ProfileGateModal } from './components/ProfileGateModal';
 import { ShareSheet } from './components/ShareSheet';
@@ -74,7 +76,7 @@ function Shell() {
   return (
     <div className="min-h-screen flex flex-col">
       {!immersive && <Header />}
-      <main className={immersive ? 'flex-1' : 'flex-1 pb-8'}>
+      <main className={immersive ? 'flex-1' : 'flex-1 pb-24 md:pb-8'}>
         <ErrorBoundary>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -94,6 +96,8 @@ function Shell() {
         </ErrorBoundary>
       </main>
       {!immersive && <Footer />}
+      {!immersive && <PwaNudge />}
+      {!immersive && <BottomNav />}
     </div>
   );
 }

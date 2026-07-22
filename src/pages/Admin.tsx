@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../state/AuthProvider';
+import { useStands } from '../state/StandsProvider';
 import { callFeedFn, feedLive } from '../state/useFeed';
 import { useI18n } from '../lib/i18n';
-import { ISSUES, issueLabel } from '../config/issues';
+import { ISSUES, issueLabel, type IssueSlug } from '../config/issues';
 import { STATES, stateName } from '../lib/states';
 import { PLATFORM_LABEL } from '../lib/feedUrl';
+import { supabase } from '../lib/supabase';
 import type { FeedItem } from '../lib/types';
 
 const REJECT_REASONS = [
@@ -12,19 +14,24 @@ const REJECT_REASONS = [
 ] as const;
 
 /**
- * Moderator queue. Access is decided server-side by the sealed `admins`
- * table — this page simply reflects what feed-moderate allows. The queue
- * deliberately carries no submitter identity: moderators judge content.
- *
- * Reported (`re_review`) items sit in their own section at the top —
- * they are already hidden from the public feed and need a fast look.
+ * Moderator queue + light stand ops (create / tag states / pin stand-of-the-day).
+ * Access is server-side via sealed `admins` table.
  */
 export default function Admin() {
   const { session, signIn } = useAuth();
+  const { stands, standStates, standOfTheDayId } = useStands();
   const { t, lang } = useI18n();
   const [items, setItems] = useState<FeedItem[]>([]);
   const [state, setState] = useState<'loading' | 'ok' | 'denied'>('loading');
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  const [title, setTitle] = useState('');
+  const [titleHi, setTitleHi] = useState('');
+  const [desc, setDesc] = useState('');
+  const [category, setCategory] = useState<IssueSlug>(ISSUES[0]?.slug ?? 'education');
+  const [tagStandId, setTagStandId] = useState('');
+  const [tagCodes, setTagCodes] = useState<string[]>([]);
+  const [standMsg, setStandMsg] = useState('');
 
   const load = useCallback(async () => {
     if (!feedLive || !session) return;
@@ -42,6 +49,15 @@ export default function Admin() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!tagStandId && stands[0]) setTagStandId(stands[0].id);
+  }, [stands, tagStandId]);
+
+  useEffect(() => {
+    if (!tagStandId) return;
+    setTagCodes(standStates[tagStandId] ?? []);
+  }, [tagStandId, standStates]);
+
   const act = async (item: FeedItem, action: string, extra: Record<string, unknown> = {}) => {
     if (!session) return;
     setBusyId(item.id);
@@ -51,6 +67,67 @@ export default function Admin() {
     } finally {
       setBusyId(null);
     }
+  };
+
+  const createStand = async () => {
+    if (!supabase || !session || !title.trim()) return;
+    setStandMsg('');
+    const { data, error } = await supabase
+      .from('stands')
+      .insert({
+        title: title.trim(),
+        title_hi: titleHi.trim() || null,
+        description: desc.trim() || title.trim(),
+        description_hi: null,
+        category,
+        status: 'live',
+      })
+      .select('id')
+      .single();
+    if (error) {
+      setStandMsg(error.message);
+      return;
+    }
+    setStandMsg('ok');
+    setTitle('');
+    setTitleHi('');
+    setDesc('');
+    if (data?.id) setTagStandId(data.id as string);
+    window.location.reload();
+  };
+
+  const saveTags = async () => {
+    if (!supabase || !session || !tagStandId) return;
+    setStandMsg('');
+    await supabase.from('stand_states').delete().eq('stand_id', tagStandId);
+    if (tagCodes.length) {
+      const { error } = await supabase.from('stand_states').insert(
+        tagCodes.map((state) => ({ stand_id: tagStandId, state }))
+      );
+      if (error) {
+        setStandMsg(error.message);
+        return;
+      }
+    }
+    setStandMsg('ok');
+    window.location.reload();
+  };
+
+  const pinSotd = async () => {
+    if (!supabase || !session || !tagStandId) return;
+    setStandMsg('');
+    const { error } = await supabase.from('stand_of_the_day').upsert({
+      id: true,
+      stand_id: tagStandId,
+      pinned_on: new Date().toISOString().slice(0, 10),
+      updated_at: new Date().toISOString(),
+    });
+    if (error) {
+      setStandMsg(error.message);
+      return;
+    }
+    setStandMsg('ok');
+    window.location.reload();
   };
 
   if (!feedLive) {
@@ -138,7 +215,7 @@ export default function Admin() {
           className="rounded-xl border border-line bg-faint px-3 py-2 text-sm"
           aria-label="state"
         >
-          <option value="">—</option>
+          <option value="">{t('add.allIndia')}</option>
           {STATES.map((s) => (
             <option key={s.code} value={s.code}>
               {stateName(s.code, lang)}
@@ -181,8 +258,103 @@ export default function Admin() {
   );
 
   return (
-    <div className="mx-auto max-w-2xl px-4 pt-10 space-y-6">
+    <div className="mx-auto max-w-2xl px-4 pt-10 space-y-10">
       <h1 className="font-display font-bold text-3xl text-navy">{t('mod.title')}</h1>
+
+      <section className="card p-5 space-y-4">
+        <h2 className="font-display font-semibold text-xl text-navy">{t('admin.standsTitle')}</h2>
+        {standOfTheDayId && (
+          <p className="text-xs text-sub font-mono">SOTD: {standOfTheDayId.slice(0, 8)}…</p>
+        )}
+        <label className="block text-sm">
+          <span className="font-semibold">{t('admin.newStand')} (EN)</span>
+          <input
+            className="mt-1 w-full rounded-xl border border-line bg-faint px-3 py-2"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+        </label>
+        <label className="block text-sm">
+          <span className="font-semibold">{t('admin.newStand')} (HI)</span>
+          <input
+            className="mt-1 w-full rounded-xl border border-line bg-faint px-3 py-2"
+            value={titleHi}
+            onChange={(e) => setTitleHi(e.target.value)}
+          />
+        </label>
+        <label className="block text-sm">
+          <span className="font-semibold">Description</span>
+          <textarea
+            className="mt-1 w-full rounded-xl border border-line bg-faint px-3 py-2"
+            rows={3}
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+          />
+        </label>
+        <select
+          className="w-full rounded-xl border border-line bg-faint px-3 py-2 text-sm"
+          value={category}
+          onChange={(e) => setCategory(e.target.value as IssueSlug)}
+        >
+          {ISSUES.map((i) => (
+            <option key={i.slug} value={i.slug}>
+              {issueLabel(i.slug, lang)}
+            </option>
+          ))}
+        </select>
+        <button className="btn-primary text-sm" type="button" onClick={() => void createStand()}>
+          {t('admin.saveStand')}
+        </button>
+
+        <hr className="border-line" />
+
+        <label className="block text-sm">
+          <span className="font-semibold">{t('admin.tagStates')}</span>
+          <select
+            className="mt-1 w-full rounded-xl border border-line bg-faint px-3 py-2"
+            value={tagStandId}
+            onChange={(e) => setTagStandId(e.target.value)}
+          >
+            {stands.map((s) => (
+              <option key={s.id} value={s.id}>
+                {lang === 'hi' && s.title_hi ? s.title_hi : s.title}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {STATES.map((s) => {
+            const on = tagCodes.includes(s.code);
+            return (
+              <button
+                key={s.code}
+                type="button"
+                className={`rounded-full px-3 py-1 text-xs font-semibold border ${
+                  on ? 'bg-navy text-white border-navy' : 'border-line text-sub'
+                }`}
+                onClick={() =>
+                  setTagCodes((prev) =>
+                    on ? prev.filter((c) => c !== s.code) : [...prev, s.code]
+                  )
+                }
+              >
+                {s.code}
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button className="btn-secondary text-sm" type="button" onClick={() => void saveTags()}>
+            {t('admin.saveStand')}
+          </button>
+          <button className="btn-primary text-sm" type="button" onClick={() => void pinSotd()}>
+            {t('admin.pinSotd')}
+          </button>
+        </div>
+        {standMsg && (
+          <p className={`text-sm ${standMsg === 'ok' ? 'text-green' : 'text-saffron'}`}>{standMsg}</p>
+        )}
+      </section>
 
       {state === 'loading' ? (
         <p className="text-sub">{t('misc.loading')}</p>

@@ -10,11 +10,8 @@ export default function DataRights() {
   return (
     <div className="mx-auto max-w-2xl px-4 pt-10 space-y-10 leading-relaxed">
       <header>
-        <h1 className="font-display font-bold text-3xl text-navy">Your data &amp; your rights</h1>
-        <p className="mt-2 text-sub">
-          Written in the spirit of the Digital Personal Data Protection Act (DPDP), 2023 — in plain
-          language.
-        </p>
+        <h1 className="font-display font-bold text-3xl text-navy">{t('dataRights.title')}</h1>
+        <p className="mt-2 text-sub">{t('dataRights.lead')}</p>
       </header>
 
       <section className="space-y-3">

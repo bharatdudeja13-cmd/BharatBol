@@ -16,12 +16,10 @@ import { Tilegram } from '../components/Tilegram';
 /**
  * Both ingestion paths land here:
  *   A. Web Share Target (installed PWA) → /add?url=…&text=…&title=…
- *   B. Paste (works everywhere, including iOS Safari where Share Target
- *      is unavailable) → the same three steps: link → issue → state.
+ *   B. Paste → link → issue → geography (state or All India).
  *
  * Before submit we rewrite the pasted URL to its canonical public form and
- * drop personal share tags (igsh, fbclid, …) so the stored link cannot be
- * traced back to the person who shared it into BharatBol.
+ * drop personal share tags so the stored link cannot be traced back.
  */
 export default function AddToFeed() {
   const [params] = useSearchParams();
@@ -30,13 +28,13 @@ export default function AddToFeed() {
 
   const [raw, setRaw] = useState('');
   const [issue, setIssue] = useState('');
-  const [state, setState] = useState<string | null>(null);
+  /** null = unset; 'national' = All India; else state code. */
+  const [geo, setGeo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<'' | 'done' | 'duplicate' | 'limit' | 'error'>('');
   const [errorDetail, setErrorDetail] = useState('');
   const [scrubbed, setScrubbed] = useState(false);
 
-  // Share Target hand-off: the URL can arrive in any of the three fields.
   useEffect(() => {
     const shared = [params.get('url'), params.get('text'), params.get('title')]
       .filter(Boolean)
@@ -52,9 +50,8 @@ export default function AddToFeed() {
   }, [params]);
 
   const parsed = useMemo(() => parseSocialUrl(raw) ?? findSocialUrl(raw), [raw]);
-  const canSubmit = !!parsed && !!issue && !busy;
+  const canSubmit = !!parsed && !!issue && !!geo && !busy;
 
-  // As soon as we recognise a post, replace the field with the clean public URL.
   useEffect(() => {
     if (!parsed) return;
     if (raw.trim() === parsed.canon) return;
@@ -74,18 +71,24 @@ export default function AddToFeed() {
   };
 
   const submit = async () => {
-    if (!parsed || !issue) return;
+    if (!parsed || !issue || !geo) return;
     setBusy(true);
     setResult('');
     setErrorDetail('');
     try {
       if (!feedLive) {
-        setResult('done'); // demo mode: nothing is sent anywhere
+        setResult('done');
         return;
       }
+      const national = geo === 'national';
       const res = await callFeedFn(
         'feed-submit',
-        { url: parsed.canon, issue, state },
+        {
+          url: parsed.canon,
+          issue,
+          state: national ? null : geo,
+          scope: national ? 'national' : 'state',
+        },
         session?.access_token
       );
       let data: { duplicate?: boolean; error?: string } = {};
@@ -146,7 +149,7 @@ export default function AddToFeed() {
               onClick={() => {
                 setRaw('');
                 setIssue('');
-                setState(null);
+                setGeo(null);
                 setResult('');
                 setScrubbed(false);
                 setErrorDetail('');
@@ -158,7 +161,6 @@ export default function AddToFeed() {
         </div>
       ) : (
         <>
-          {/* 1 — the link */}
           <section className="space-y-2">
             <label className="block">
               <span className="text-sm font-semibold">1 · {t('add.paste')}</span>
@@ -183,7 +185,6 @@ export default function AddToFeed() {
             )}
           </section>
 
-          {/* 2 — the issue */}
           <section className="space-y-2">
             <span className="text-sm font-semibold">2 · {t('add.pickIssue')}</span>
             <div className="flex flex-wrap gap-2">
@@ -201,17 +202,31 @@ export default function AddToFeed() {
             </div>
           </section>
 
-          {/* 3 — the state */}
           <section className="space-y-3">
             <span className="text-sm font-semibold">3 · {t('add.pickState')}</span>
-            <Tilegram countsByState={{}} selected={state} onSelect={setState} />
+            <p className="text-xs text-sub">{t('add.geoHint')}</p>
+            <button
+              type="button"
+              className={`rounded-full px-4 py-2 text-sm font-semibold border transition ${
+                geo === 'national' ? 'bg-navy text-white border-navy' : 'bg-white text-sub border-line'
+              }`}
+              onClick={() => setGeo('national')}
+            >
+              {t('add.allIndia')}
+            </button>
+            <Tilegram
+              countsByState={{}}
+              selected={geo && geo !== 'national' ? geo : null}
+              onSelect={(code) => setGeo(code)}
+            />
             <select
-              value={state ?? ''}
-              onChange={(e) => setState(e.target.value || null)}
+              value={geo === 'national' ? 'national' : (geo ?? '')}
+              onChange={(e) => setGeo(e.target.value || null)}
               className="w-full rounded-xl border border-line bg-faint px-4 py-2.5 text-sm"
               aria-label={t('add.pickState')}
             >
-              <option value="">—</option>
+              <option value="">{t('add.geoUnset')}</option>
+              <option value="national">{t('add.allIndia')}</option>
               {STATES.map((s) => (
                 <option key={s.code} value={s.code}>
                   {stateName(s.code, lang)}
@@ -246,7 +261,6 @@ export default function AddToFeed() {
   );
 }
 
-/** Clear install + share-from-app steps; privacy note on share-tag scrubbing. */
 function InstallAndShareGuide() {
   const { t } = useI18n();
   return (

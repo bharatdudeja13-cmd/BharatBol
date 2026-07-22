@@ -36,6 +36,8 @@ export type FeedItem = {
   thumbnail_url: string | null;
   issue: string;
   state: string | null;
+  /** 'state' = tagged to one state; 'national' = All India (shows on every tile). */
+  scope?: 'state' | 'national';
   status: string;
   flagged?: boolean;
   reports?: number;

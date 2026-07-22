@@ -34,15 +34,16 @@ type StandsCtx = {
   national: number;
   wall: WallEntry[];
   breakdown: StateRow[];
+  /** stand_id → state codes tagged “especially relevant in”. Empty = national only. */
+  standStates: Record<string, string[]>;
+  /** Featured stand pin, if any. */
+  standOfTheDayId: string | null;
   joined: Set<string>;
-  /** Unused in account-linked mode; kept so callers compile. */
-  lockedElsewhere: Set<string>;
   loading: boolean;
   requestStand: (stand: Stand) => Promise<void>;
   withdraw: (standId: string) => Promise<void>;
   withdrawAll: () => Promise<void>;
   syncWall: (profile: Profile) => Promise<void>;
-  refreshReceipts: () => void;
   profileGate: Stand | null;
   resolveProfileGate: (proceed: boolean) => Promise<void>;
   shareFor: Stand | null;
@@ -60,6 +61,8 @@ export function StandsProvider({ children }: { children: ReactNode }) {
   const [national, setNational] = useState(0);
   const [wall, setWall] = useState<WallEntry[]>([]);
   const [breakdown, setBreakdown] = useState<StateRow[]>([]);
+  const [standStates, setStandStates] = useState<Record<string, string[]>>({});
+  const [standOfTheDayId, setStandOfTheDayId] = useState<string | null>(null);
   const [joined, setJoined] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [profileGate, setProfileGate] = useState<Stand | null>(null);
@@ -75,17 +78,21 @@ export function StandsProvider({ children }: { children: ReactNode }) {
       setNational(DEMO_NATIONAL);
       setWall(DEMO_WALL);
       setBreakdown(DEMO_BREAKDOWN);
+      setStandStates({ [DEMO_STANDS[0].id]: ['MH', 'DL'] });
+      setStandOfTheDayId(DEMO_STANDS[0].id);
       setLoading(false);
       return;
     }
     let cancelled = false;
     (async () => {
-      const [standsRes, countsRes, wallRes, bdRes, natRes] = await Promise.all([
+      const [standsRes, countsRes, wallRes, bdRes, natRes, ssRes, sotdRes] = await Promise.all([
         supabase!.from('stands').select('*').eq('status', 'live').order('created_at'),
         supabase!.from('stand_counts').select('*'),
         supabase!.from('wall').select('*').order('created_at', { ascending: false }).limit(200),
         supabase!.from('state_breakdown').select('*'),
         supabase!.rpc('get_national_total'),
+        supabase!.from('stand_states').select('stand_id,state'),
+        supabase!.from('stand_of_the_day').select('stand_id').maybeSingle(),
       ]);
       if (cancelled) return;
       setStands((standsRes.data as Stand[]) ?? []);
@@ -102,6 +109,15 @@ export function StandsProvider({ children }: { children: ReactNode }) {
         }))
       );
       setNational(Number(natRes.data ?? 0));
+      const ss: Record<string, string[]> = {};
+      for (const row of ssRes.data ?? []) {
+        const id = row.stand_id as string;
+        const st = row.state as string;
+        if (!ss[id]) ss[id] = [];
+        ss[id].push(st);
+      }
+      setStandStates(ss);
+      setStandOfTheDayId((sotdRes.data?.stand_id as string) ?? null);
       setLoading(false);
     })();
     return () => {
@@ -359,7 +375,6 @@ export function StandsProvider({ children }: { children: ReactNode }) {
     [session, joined]
   );
 
-  const refreshReceipts = useCallback(() => {}, []);
   const clearJoinError = useCallback(() => setJoinError(null), []);
 
   const value = useMemo(
@@ -369,14 +384,14 @@ export function StandsProvider({ children }: { children: ReactNode }) {
       national,
       wall,
       breakdown,
+      standStates,
+      standOfTheDayId,
       joined,
-      lockedElsewhere: new Set<string>(),
       loading,
       requestStand,
       withdraw,
       withdrawAll,
       syncWall,
-      refreshReceipts,
       profileGate,
       resolveProfileGate,
       shareFor,
@@ -390,13 +405,14 @@ export function StandsProvider({ children }: { children: ReactNode }) {
       national,
       wall,
       breakdown,
+      standStates,
+      standOfTheDayId,
       joined,
       loading,
       requestStand,
       withdraw,
       withdrawAll,
       syncWall,
-      refreshReceipts,
       profileGate,
       resolveProfileGate,
       shareFor,

@@ -13,7 +13,11 @@ guardrails live in the [README](../README.md); the privacy design is in
    [`supabase/phase3_polls.sql`](../supabase/phase3_polls.sql),
    [`supabase/phase4_feed.sql`](../supabase/phase4_feed.sql),
    [`supabase/phase5_feed_reactions.sql`](../supabase/phase5_feed_reactions.sql) and
-   [`supabase/phase6_account_stands.sql`](../supabase/phase6_account_stands.sql), once each, in that order.
+   [`supabase/phase6_account_stands.sql`](../supabase/phase6_account_stands.sql) and
+   [`supabase/phase7_geography.sql`](../supabase/phase7_geography.sql), once each, in that order.
+   Phase7 also recreates **public** `stand_counts` / `state_breakdown` /
+   `feed_reaction_counts` as security-definer aggregates (anon must see totals)
+   and adds evidence `scope` + `stand_states` / stand-of-the-day.
 3. Generate the registrar key pair and deploy Edge Functions (legacy blind path still
    deployable; the **live app** uses account-linked `stand_commitments` /
    `feed_item_reactions` via client RLS after phase6 — no ballot/react edge calls):
@@ -46,8 +50,20 @@ guardrails live in the [README](../README.md); the privacy design is in
    [privacy-architecture.md](privacy-architecture.md).
 4. **Authentication → Providers → Google**: enable it (create OAuth credentials in Google Cloud
    Console; authorized redirect URI = `https://<project-ref>.supabase.co/auth/v1/callback`).
-5. **Authentication → URL Configuration**: set Site URL to your Pages domain and add it to
-   Redirect URLs (plus `http://localhost:5173` for development).
+5. **Authentication → URL Configuration** (required for sticky login + BharatBol branding):
+   - **Site URL** = your production origin (e.g. `https://bharatbol.pages.dev` or custom domain) —
+     *not* the `*.supabase.co` API host. This is what Supabase uses as the default return target.
+   - **Redirect URLs** must include every origin the SPA is served from, e.g.
+     `https://bharatbol.pages.dev/**`, your custom domain `/**`, and `http://localhost:5173/**`.
+   - The Google consent screen still routes through `https://<project-ref>.supabase.co` as the
+     OAuth client — that host string is Google’s redirect, not our product name. To show
+     **BharatBol** instead of a raw project URL on the consent screen:
+     1. Google Cloud Console → APIs & Services → OAuth consent screen → **App name = BharatBol**
+     2. Application home page / privacy = your `VITE_SITE_URL`
+     3. Keep Supabase as the authorized redirect URI as above
+   - Client `signInWithOAuth` uses `window.location.origin` + current path as `redirectTo`
+     (PKCE). After Google, the session is stored in `localStorage`; if login “doesn’t stick”,
+     the usual cause is a redirect URL missing from the allow list.
 
 ## 2. Environment
 
