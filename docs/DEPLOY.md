@@ -141,18 +141,17 @@ The Worker's runtime `vars` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`) live in `wrang
 Both are public by design (and match what should also be inlined in the client bundle via
 `VITE_*` Build variables); never add the service-role key or the registrar private key there.
 
-## 4. Merkle checkpoints (tamper-evidence)
+## 4. Merkle checkpoints (paused)
 
-Add two GitHub Actions secrets — `SUPABASE_URL` and `SUPABASE_ANON_KEY` (the
-publishable key; it is public by design) — and the
-[checkpoint workflow](../.github/workflows/checkpoint.yml) will commit a Merkle root
-over the public ballot log to `checkpoints/roots.jsonl` every 6 hours. Trigger the
-first run manually (Actions → Merkle checkpoint → Run workflow). Verification
-instructions for anyone: [checkpoints/README.md](../checkpoints/README.md).
+Account-linked mode does **not** append anonymous ballots, so the ballot-log Merkle
+workflow is parked. Leave the GitHub Action idle until blind ballots are restored
+(see [privacy-architecture.md](privacy-architecture.md)). Do not treat
+`checkpoints/roots.jsonl` as live verification of current stands.
 
 ## 5. Verify end-to-end
 
 Sign in on the deployed site, stand on an issue, and confirm: the count bumps live in a second
-browser, your name appears on the wall (if opted in), withdrawal decrements the count, and
-account deletion (Profile → delete) withdraws this browser's ballots and erases the account.
-Run `npm test` — the unlinkability gate must pass on every change to the schema or functions.
+browser (including while signed out), your name appears on the wall (if opted in), withdrawal
+decrements the count, and account deletion (Profile → delete) removes commitments and erases
+the account. Watch evidence and national totals without signing in.
+Run `npm test` on every change to the schema or functions.
