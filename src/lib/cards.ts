@@ -145,46 +145,51 @@ export async function drawProofCard(opts: {
   const ctx = canvas.getContext('2d')!;
   base(ctx, w, h);
 
+  const story = opts.format === 'story';
   // Story format gets extra breathing room at the top.
-  let y = opts.format === 'story' ? 480 : 340;
+  let y = story ? 480 : 320;
 
   // The hook: मैंने बोला। / I spoke.
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = '700 110px "Plus Jakarta Sans", sans-serif';
+  ctx.font = `700 ${story ? 110 : 100}px "Plus Jakarta Sans", sans-serif`;
   ctx.fillText('मैंने बोला।', 72, y);
-  y += 90;
+  y += story ? 90 : 84;
   ctx.fillStyle = '#E2892C';
-  ctx.font = '600 64px Fraunces, serif';
+  ctx.font = '600 60px Fraunces, serif';
   ctx.fillText('I spoke.', 72, y);
 
-  y += opts.format === 'story' ? 140 : 110;
+  y += story ? 140 : 100;
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
   ctx.font = '500 44px Fraunces, serif';
   ctx.fillText(`I'm 1 of`, 72, y);
 
-  y += 140;
+  y += story ? 140 : 128;
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = '700 148px Fraunces, serif';
+  ctx.font = `700 ${story ? 148 : 140}px Fraunces, serif`;
   ctx.fillText(fmt(opts.count), 72, y);
 
-  y += 84;
+  y += story ? 84 : 76;
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
   ctx.font = '500 44px Fraunces, serif';
   ctx.fillText('who said this matters:', 72, y);
 
-  y += 92;
+  y += story ? 92 : 84;
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = '600 60px Fraunces, serif';
-  const maxTitleLines = opts.format === 'story' ? 6 : 4;
+  ctx.font = `600 ${story ? 60 : 56}px Fraunces, serif`;
+  const maxTitleLines = story ? 6 : 3;
   for (const line of wrapText(ctx, opts.title, w - 160).slice(0, maxTitleLines)) {
     ctx.fillText(line, 72, y);
-    y += 78;
+    y += story ? 78 : 72;
   }
 
-  y += 42;
-  ctx.fillStyle = '#E2892C';
-  ctx.font = '600 46px Fraunces, serif';
-  ctx.fillText('Bharat, bol. 👉', 72, y);
+  // CTA only when it clears the footer block — the footer carries the
+  // hashtags and link regardless, so nothing essential is ever lost.
+  y += 36;
+  if (y <= h - 260) {
+    ctx.fillStyle = '#E2892C';
+    ctx.font = '600 46px Fraunces, serif';
+    ctx.fillText('Bharat, bol. 👉', 72, y);
+  }
 
   footer(ctx, w, h, opts.url, opts.hashtags ?? BRAND.hashtag);
   return canvas;
