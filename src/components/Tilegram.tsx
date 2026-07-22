@@ -35,7 +35,7 @@ export function Tilegram({
             role="option"
             aria-selected={isSel}
             aria-label={`${stateName(s.code, lang)}: ${fmt(count)}`}
-            title={`${stateName(s.code, lang)} — ${fmt(count)}`}
+            title={`${stateName(s.code, lang)} - ${fmt(count)}`}
             onClick={() => onSelect(isSel ? null : s.code)}
             className={`aspect-square rounded-lg text-[10px] sm:text-xs font-mono font-semibold transition
               flex items-center justify-center select-none

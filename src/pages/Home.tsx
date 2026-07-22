@@ -14,6 +14,7 @@ import { useEvidence, evidenceWatchPath } from '../state/useEvidence';
 import { fmt } from '../lib/format';
 import { stateName } from '../lib/states';
 import { PwaInstallButton } from '../components/PwaInstallButton';
+import { deriveOpenIssues, topIssueStates } from '../lib/openIssues';
 
 export default function Home() {
   const { stands, counts, national, wall, breakdown, standStates, standOfTheDayId, loading } =
@@ -30,23 +31,32 @@ export default function Home() {
     () => Object.values(counts).reduce((a, c) => a + c.today, 0),
     [counts]
   );
-  const countsByState = useMemo(() => {
+
+  /** Citizens standing in each state (for the selected-state panel only). */
+  const standingByState = useMemo(() => {
     const m: Record<string, number> = {};
     for (const r of breakdown) m[r.state] = (m[r.state] ?? 0) + r.count;
     return m;
   }, [breakdown]);
 
-  /** All live stands are open nationally; optional tags = especially relevant here. */
+  const { openNational, openStateTagged, addedToday, issuesByState } = useMemo(
+    () => deriveOpenIssues(stands, standStates),
+    [stands, standStates]
+  );
+
+  const topStates = useMemo(() => topIssueStates(issuesByState, 5), [issuesByState]);
+  const topMax = topStates[0]?.count ?? 0;
+
+  /** Tagged to this state first, then All India (untagged). Never other states only. */
   const openStands = useMemo(() => {
     if (!selState) return [];
-    return [...stands].sort((a, b) => {
-      const aTag = (standStates[a.id] ?? []).includes(selState) ? 0 : 1;
-      const bTag = (standStates[b.id] ?? []).includes(selState) ? 0 : 1;
-      if (aTag !== bTag) return aTag - bTag;
-      const aCount = breakdown.find((r) => r.stand_id === a.id && r.state === selState)?.count ?? 0;
-      const bCount = breakdown.find((r) => r.stand_id === b.id && r.state === selState)?.count ?? 0;
-      return bCount - aCount;
-    });
+    const tagged = stands.filter((s) => (standStates[s.id] ?? []).includes(selState));
+    const nationalOnly = stands.filter((s) => (standStates[s.id] ?? []).length === 0);
+    const score = (id: string) =>
+      breakdown.find((r) => r.stand_id === id && r.state === selState)?.count ?? 0;
+    const byStanding = (a: (typeof stands)[0], b: (typeof stands)[0]) =>
+      score(b.id) - score(a.id);
+    return [...tagged.sort(byStanding), ...nationalOnly.sort(byStanding)];
   }, [stands, standStates, breakdown, selState]);
 
   const featured = useMemo(
@@ -58,6 +68,8 @@ export default function Home() {
     selState
       ? (breakdown.find((r) => r.stand_id === standId && r.state === selState)?.count ?? 0)
       : 0;
+
+  const issuesHere = selState ? (issuesByState[selState] ?? 0) : 0;
 
   return (
     <div className="mx-auto max-w-5xl px-4">
@@ -86,12 +98,52 @@ export default function Home() {
           <Link to="/stands" className="btn-primary text-base px-8 min-h-12">
             {t('hero.ctaStand')}
           </Link>
-          <Link to="/evidence" className="btn-secondary text-base min-h-12">
-            {t('evidence.title')}
+          <Link to="/feed" className="btn-secondary text-base min-h-12">
+            {t('nav.feed')}
           </Link>
           <PwaInstallButton className="btn-ghost text-base min-h-12" />
         </div>
         <p className="mt-4 text-xs text-sub font-mono">{t('counts.verified')}</p>
+      </section>
+
+      {/* Daily Issues pulse */}
+      <section className="mb-10 rounded-3xl border border-line bg-white/80 px-5 py-6 sm:px-7 shadow-lift">
+        <p className="text-xs font-mono uppercase tracking-widest text-saffron">{t('home.dailyPulseTitle')}</p>
+        <p className="mt-2 text-sm text-sub max-w-2xl leading-relaxed">{t('home.dailyPulseSub')}</p>
+        <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="rounded-2xl bg-faint border border-line px-3 py-3 text-center">
+            <p className="font-display text-2xl font-bold text-navy tabular-nums">{fmt(openNational)}</p>
+            <p className="text-[11px] text-sub mt-1 leading-snug">{t('home.openNational')}</p>
+          </div>
+          <div className="rounded-2xl bg-faint border border-line px-3 py-3 text-center">
+            <p className="font-display text-2xl font-bold text-navy tabular-nums">{fmt(openStateTagged)}</p>
+            <p className="text-[11px] text-sub mt-1 leading-snug">{t('home.openStateTagged')}</p>
+          </div>
+          <div className="rounded-2xl bg-faint border border-line px-3 py-3 text-center">
+            <p className="font-display text-2xl font-bold text-navy tabular-nums">{fmt(addedToday.length)}</p>
+            <p className="text-[11px] text-sub mt-1 leading-snug">{t('home.addedToday')}</p>
+          </div>
+          <div className="rounded-2xl bg-faint border border-line px-3 py-3 text-center">
+            <p className="font-display text-2xl font-bold text-green tabular-nums">+{fmt(todayTotal)}</p>
+            <p className="text-[11px] text-sub mt-1 leading-snug">{t('home.standingToday')}</p>
+          </div>
+        </div>
+        {addedToday.length > 0 && (
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            {addedToday.slice(0, 3).map((s) => (
+              <Link
+                key={s.id}
+                to={`/stand/${s.id}`}
+                className="inline-flex max-w-full rounded-full border border-line bg-bg px-3 py-1.5 text-xs font-semibold text-navy hover:border-navy/40 truncate"
+              >
+                {lang === 'hi' && s.title_hi ? s.title_hi : s.title}
+              </Link>
+            ))}
+            <Link to="/stands" className="text-xs font-semibold text-navy underline underline-offset-4 shrink-0">
+              {t('home.seeAllStands')}
+            </Link>
+          </div>
+        )}
       </section>
 
       {featured && (
@@ -104,16 +156,61 @@ export default function Home() {
       )}
 
       <section className="mt-2" id="map">
-        <h2 className="font-display font-semibold text-2xl">{t('map.title')}</h2>
-        <p className="text-sm text-sub mt-1 mb-5">{t('map.sub')}</p>
-        <Tilegram countsByState={countsByState} selected={selState} onSelect={setSelState} />
+        <h2 className="font-display font-semibold text-2xl">{t('home.issuesMapTitle')}</h2>
+        <p className="text-sm text-sub mt-1 mb-4">{t('home.issuesMapSub')}</p>
+
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <Link
+            to="/stands?geo=national"
+            className="inline-flex items-center gap-2 rounded-full border border-navy/20 bg-navy text-white px-4 py-2 text-sm font-semibold min-h-10"
+          >
+            {t('home.allIndiaOpen')}
+            <span className="tabular-nums font-mono text-saffron">{fmt(openNational)}</span>
+          </Link>
+        </div>
+
+        <Tilegram countsByState={issuesByState} selected={selState} onSelect={setSelState} />
         <div className="mt-4 flex items-center justify-center gap-2 text-xs text-sub" aria-hidden="true">
-          <span>{t('map.legendLow')}</span>
+          <span>{t('home.issuesLegendLow')}</span>
           {['#E7EBF1', '#A9C3D9', '#5F8FBF', '#2E5E9E', '#15305E'].map((c) => (
             <span key={c} className="inline-block w-5 h-3 rounded" style={{ backgroundColor: c }} />
           ))}
-          <span>{t('map.legendHigh')}</span>
+          <span>{t('home.issuesLegendHigh')}</span>
         </div>
+
+        {topStates.length > 0 && (
+          <div className="mt-8">
+            <h3 className="text-sm font-semibold text-navy mb-3">{t('home.topStates')}</h3>
+            <ul className="space-y-2.5 max-w-lg">
+              {topStates.map(({ code, count }) => {
+                const pct = topMax > 0 ? Math.round((count / topMax) * 100) : 0;
+                const active = selState === code;
+                return (
+                  <li key={code}>
+                    <button
+                      type="button"
+                      onClick={() => setSelState(active ? null : code)}
+                      className={`w-full text-left rounded-xl px-3 py-2.5 transition border ${
+                        active ? 'border-saffron bg-saffron/10' : 'border-transparent hover:bg-faint'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3 text-sm mb-1.5">
+                        <span className="font-semibold text-ink">{stateName(code, lang)}</span>
+                        <span className="font-mono tabular-nums text-navy">{fmt(count)}</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-faint overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-navy transition-all"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
 
         {selState && (
           <div className="mt-6 rounded-t-3xl border border-line bg-white shadow-lift p-5 space-y-5 pb-8">
@@ -123,16 +220,24 @@ export default function Home() {
                   {stateName(selState, lang)}
                 </h3>
                 <p className="text-sm text-sub mt-0.5">
-                  {fmt(countsByState[selState] ?? 0)} {t('map.inState')} · {openStands.length}{' '}
-                  {t('map.openStands')} · {stateEvidence.length} {t('map.evidenceCount')}
+                  {fmt(issuesHere)} {t('home.issuesInState')} · {fmt(standingByState[selState] ?? 0)}{' '}
+                  {t('map.inState')} · {stateEvidence.length} {t('map.evidenceCount')}
                 </p>
               </div>
-              <Link
-                to={evidenceWatchPath({ state: selState })}
-                className="btn-primary text-sm !py-2.5 !px-4 min-h-11"
-              >
-                {t('evidence.viewState')}
-              </Link>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  to={`/stands?state=${selState}`}
+                  className="btn-secondary text-sm !py-2.5 !px-4 min-h-11"
+                >
+                  {t('stands.browseState')}
+                </Link>
+                <Link
+                  to={evidenceWatchPath({ state: selState })}
+                  className="btn-primary text-sm !py-2.5 !px-4 min-h-11"
+                >
+                  {t('evidence.viewState')}
+                </Link>
+              </div>
             </div>
 
             <div>
