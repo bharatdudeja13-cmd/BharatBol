@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useStands } from '../state/StandsProvider';
+import { hashtagBlock } from '../lib/campaign';
 import { useI18n } from '../lib/i18n';
 import { LiveNumber } from '../components/LiveNumber';
 import { SupporterWall } from '../components/SupporterWall';
@@ -55,6 +56,7 @@ export default function StandDetail() {
       </div>
 
       <h1 className="mt-3 font-display font-bold text-3xl sm:text-4xl leading-tight text-ink">{title}</h1>
+      <p className="mt-2 font-mono text-sm font-semibold text-saffron">{hashtagBlock(stand)}</p>
       <p className="mt-4 text-sub leading-relaxed">{desc}</p>
 
       {/* Big live counter + action */}
@@ -74,9 +76,10 @@ export default function StandDetail() {
             {isJoined ? '✓ ' + t('stand.standing') : t('stand.standWith')}
           </button>
           <button className="btn-secondary" onClick={() => setShareFor(stand)}>
-            {t('stand.share')}
+            {t('campaign.start')}
           </button>
         </div>
+        <p className="mt-3 text-sm text-sub italic">{t('campaign.line')}</p>
         {isJoined && (
           <button
             className="mt-4 text-xs text-sub underline underline-offset-4 hover:text-navy"

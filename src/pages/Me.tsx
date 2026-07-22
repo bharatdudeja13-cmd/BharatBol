@@ -165,6 +165,20 @@ export default function Me() {
             >
               {t('share.download')}
             </button>
+            <button
+              className="btn-secondary text-sm"
+              onClick={() =>
+                void drawCitizenCard({
+                  firstName: profile?.first_name || name,
+                  stateName: stateName(profile?.state, lang),
+                  titles: myStands.map((s) => s.title),
+                  url: SITE_URL,
+                  format: 'story',
+                }).then((c) => downloadCanvas(c, 'bharatbol-citizen-story.png'))
+              }
+            >
+              {t('share.formatStory')}
+            </button>
           </div>
         </section>
       )}
