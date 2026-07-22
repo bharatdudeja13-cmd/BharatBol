@@ -36,12 +36,12 @@
 }
 
 /* Rotating stand strip on the Home page */
-@keyframes praja-marquee {
+@keyframes bb-marquee {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }
 }
 .marquee-track {
-  animation: praja-marquee 45s linear infinite;
+  animation: bb-marquee 45s linear infinite;
 }
 .marquee:hover .marquee-track,
 .marquee:focus-within .marquee-track {

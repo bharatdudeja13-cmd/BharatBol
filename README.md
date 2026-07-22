@@ -1,12 +1,12 @@
-# Praja — Where India stands. <img src="public/icons/icon.svg" width="28" align="top" alt="">
+# BharatBol — Bharat, speak. <img src="public/icons/icon.svg" width="28" align="top" alt="">
 
-**Praja** (प्रजा — “the people”) is a mobile-first, installable PWA: a strictly **non-partisan
+**BharatBol** (भारत बोल — “Bharat, speak”) is a mobile-first, installable PWA: a strictly **non-partisan
 national civic square** where any Indian citizen — whatever party they support, or none — can
 publicly **stand** on an issue and be counted, verifiably and in the open.
 
 > **The one promise: prove how many. Never show who.**
 
-Praja is an independent, non-partisan civic platform. It is not affiliated with any government,
+BharatBol is an independent, non-partisan civic platform. It is not affiliated with any government,
 party, or election authority. Counts reflect public sentiment and **are not an election**.
 
 ---
@@ -73,4 +73,4 @@ Operator setup (Supabase, registrar keys, Edge Functions, Cloudflare Pages) live
 
 ## License
 
-[MIT](LICENSE). Praja is open source so its promises can be verified, not merely believed.
+[MIT](LICENSE). BharatBol is open source so its promises can be verified, not merely believed.

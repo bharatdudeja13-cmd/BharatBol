@@ -85,7 +85,7 @@ export default function Me() {
   const doExport = () => {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([exportReceipts()], { type: 'application/json' }));
-    a.download = 'praja-receipts.json';
+    a.download = 'bharatbol-receipts.json';
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -152,8 +152,8 @@ export default function Me() {
               className="btn-primary text-sm"
               onClick={() =>
                 cardCanvas &&
-                void shareCanvas(cardCanvas, `${name} ${t('citizen.standsWith')} — Praja`, SITE_URL).then(
-                  (ok) => !ok && downloadCanvas(cardCanvas, 'praja-citizen-card.png')
+                void shareCanvas(cardCanvas, `${name} ${t('citizen.standsWith')} — BharatBol`, SITE_URL).then(
+                  (ok) => !ok && downloadCanvas(cardCanvas, 'bharatbol-citizen-card.png')
                 )
               }
             >
@@ -161,7 +161,7 @@ export default function Me() {
             </button>
             <button
               className="btn-secondary text-sm"
-              onClick={() => cardCanvas && downloadCanvas(cardCanvas, 'praja-citizen-card.png')}
+              onClick={() => cardCanvas && downloadCanvas(cardCanvas, 'bharatbol-citizen-card.png')}
             >
               {t('share.download')}
             </button>

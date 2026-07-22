@@ -1,4 +1,4 @@
-// Shared helpers for Praja Edge Functions (Deno runtime).
+// Shared helpers for BharatBol Edge Functions (Deno runtime).
 import { RSABSSA } from 'npm:@cloudflare/blindrsa-ts@0.4.4';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -27,7 +27,7 @@ export function adminClient() {
 }
 
 export function ballotMessage(standId: string, tokenHex: string): Uint8Array {
-  return new TextEncoder().encode(`praja:ballot:v1:${standId}:${tokenHex}`);
+  return new TextEncoder().encode(`bharatbol:ballot:v1:${standId}:${tokenHex}`);
 }
 
 export async function nullifierOf(standId: string, tokenHex: string): Promise<string> {

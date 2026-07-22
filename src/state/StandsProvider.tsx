@@ -30,8 +30,8 @@ import {
   DEMO_BREAKDOWN,
 } from '../lib/demo';
 
-const PENDING_KEY = 'praja:pending-stand';
-const CAST_KEY = 'praja:cast:v1';
+const PENDING_KEY = 'bharatbol:pending-stand';
+const CAST_KEY = 'bharatbol:cast:v1';
 
 const loadCast = (): string[] => {
   try {
@@ -177,7 +177,7 @@ export function StandsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!supabase) return;
     const channel = supabase
-      .channel('praja-live')
+      .channel('bharatbol-live')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'ballots' },

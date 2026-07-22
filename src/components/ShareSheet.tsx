@@ -47,7 +47,7 @@ export function ShareSheet() {
 
   const doShare = async () => {
     if (canvas && (await shareCanvas(canvas, shareText, link))) return;
-    if (canvas) downloadCanvas(canvas, 'praja-stand.png');
+    if (canvas) downloadCanvas(canvas, 'bharatbol-stand.png');
   };
 
   const copy = async () => {
@@ -94,7 +94,7 @@ export function ShareSheet() {
           >
             {t('share.whatsapp')}
           </a>
-          <button className="btn-secondary text-sm" onClick={() => canvas && downloadCanvas(canvas, 'praja-stand.png')}>
+          <button className="btn-secondary text-sm" onClick={() => canvas && downloadCanvas(canvas, 'bharatbol-stand.png')}>
             {t('share.download')}
           </button>
           <button className="btn-ghost col-span-2 text-sm" onClick={() => void copy()}>

@@ -70,7 +70,7 @@ export default function DataRights() {
           </table>
         </div>
         <p className="text-sub text-sm">
-          That is the complete list. Praja stores no phone number, no address, no browsing profile,
+          That is the complete list. BharatBol stores no phone number, no address, no browsing profile,
           and shows no advertising.
         </p>
       </section>

@@ -3,6 +3,7 @@ import { BrandMark } from './AshokaChakra';
 import { useI18n } from '../lib/i18n';
 import { useAuth } from '../state/AuthProvider';
 import { isLive } from '../lib/supabase';
+import { BRAND } from '../config/brand';
 
 export function Header() {
   const { t, lang, setLang } = useI18n();
@@ -14,9 +15,20 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 bg-bg/90 backdrop-blur border-b border-line">
       <div className="mx-auto max-w-5xl px-4 h-16 flex items-center gap-2">
-        <Link to="/" className="flex items-center gap-2.5 mr-auto" aria-label="Praja home">
+        <Link to="/" className="flex items-center gap-2.5 mr-auto" aria-label="BharatBol home">
           <BrandMark size={36} />
-          <span className="font-display font-semibold text-xl tracking-tight">{t('app.name')}</span>
+          <span className="font-display text-xl tracking-tight">
+            {lang === 'hi' ? (
+              <>
+                {BRAND.wordmarkHi.regular} <b className="font-bold">{BRAND.wordmarkHi.bold}</b>
+              </>
+            ) : (
+              <>
+                {BRAND.wordmark.regular}
+                <b className="font-bold">{BRAND.wordmark.bold}</b>
+              </>
+            )}
+          </span>
         </Link>
 
         <nav className="flex items-center gap-1" aria-label="Main">

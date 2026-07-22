@@ -1,5 +1,5 @@
 -- ============================================================
--- Praja — schema, RLS, public views, RPCs, triggers, seed data
+-- BharatBol — schema, RLS, public views, RPCs, triggers, seed data
 -- Run this once in the Supabase SQL editor (or `supabase db push`).
 --
 -- THE PROMISE: prove how many, never show who.

@@ -1,9 +1,9 @@
 {
-  "name": "praja",
+  "name": "bharatbol",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Praja — an independent, non-partisan civic square where India stands.",
+  "description": "BharatBol — an independent, non-partisan civic square where Bharat speaks.",
   "license": "MIT",
   "scripts": {
     "dev": "vite",

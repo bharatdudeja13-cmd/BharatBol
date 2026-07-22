@@ -32,7 +32,7 @@ class BallotStore {
     const ok = await suite().verify(
       keys.publicKey,
       Uint8Array.from(atob(r.sig_b64), (c) => c.charCodeAt(0)),
-      new TextEncoder().encode(`praja:ballot:v1:${r.stand_id}:${r.token}`)
+      new TextEncoder().encode(`bharatbol:ballot:v1:${r.stand_id}:${r.token}`)
     );
     if (!ok) return 'invalid';
     const nullifier = await nullifierOf(r.stand_id, r.token);

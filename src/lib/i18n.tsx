@@ -3,8 +3,8 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 export type Lang = 'en' | 'hi';
 
 const en = {
-  'app.name': 'Praja',
-  'app.tagline': 'Where India stands.',
+  'app.name': 'BharatBol',
+  'app.tagline': 'Bharat, speak.',
   'app.kicker': 'An independent, non-partisan civic square',
   'app.sub':
     'Whatever party you support — or none — stand on the issues that matter and be counted. Free. Public. Revocable by you.',
@@ -21,7 +21,7 @@ const en = {
   'counts.verified': 'Verified engaged citizens — one account, one stand. Not a census.',
   'receipts.title': 'Your ballot receipts',
   'receipts.explain':
-    'Receipts are the anonymous proof of your stands. They exist only in this browser — export a backup to withdraw or continue from another device. Praja cannot restore them: that is what keeps your ballots unlinkable.',
+    'Receipts are the anonymous proof of your stands. They exist only in this browser — export a backup to withdraw or continue from another device. BharatBol cannot restore them: that is what keeps your ballots unlinkable.',
   'receipts.export': 'Export receipts',
   'receipts.import': 'Import receipts',
   'receipts.imported': 'Receipts imported',
@@ -74,7 +74,7 @@ const en = {
     'This permanently removes your account, your profile, and every stand you have taken. Counts will decrease accordingly. This cannot be undone.',
   'profile.deleteConfirm': 'Yes, erase everything',
   'disclaimer':
-    'Praja is an independent, non-partisan civic platform. It is not affiliated with any government, party, or election authority. Counts reflect public sentiment and are not an election.',
+    'BharatBol is an independent, non-partisan civic platform. It is not affiliated with any government, party, or election authority. Counts reflect public sentiment and are not an election.',
   'footer.about': 'About & transparency',
   'footer.data': 'Your data & rights',
   'footer.source': 'Open source',
@@ -85,8 +85,8 @@ const en = {
 };
 
 const hi: Record<keyof typeof en, string> = {
-  'app.name': 'प्रजा',
-  'app.tagline': 'जहाँ भारत खड़ा है।',
+  'app.name': 'भारत बोल',
+  'app.tagline': 'भारत, बोल।',
   'app.kicker': 'एक स्वतंत्र, गैर-दलीय नागरिक मंच',
   'app.sub':
     'आप किसी भी दल के समर्थक हों — या किसी के नहीं — जो मुद्दे मायने रखते हैं उन पर खड़े हों और गिने जाएँ। निःशुल्क। सार्वजनिक। आपके हाथ में।',
@@ -103,7 +103,7 @@ const hi: Record<keyof typeof en, string> = {
   'counts.verified': 'सत्यापित सक्रिय नागरिक — एक खाता, एक पक्ष। यह जनगणना नहीं है।',
   'receipts.title': 'आपकी मतपत्र रसीदें',
   'receipts.explain':
-    'रसीदें आपके पक्षों का गुमनाम प्रमाण हैं। ये केवल इसी ब्राउज़र में हैं — दूसरे डिवाइस से जारी रखने या वापस लेने के लिए बैकअप निर्यात करें। प्रजा इन्हें बहाल नहीं कर सकता: यही आपकी गुमनामी की गारंटी है।',
+    'रसीदें आपके पक्षों का गुमनाम प्रमाण हैं। ये केवल इसी ब्राउज़र में हैं — दूसरे डिवाइस से जारी रखने या वापस लेने के लिए बैकअप निर्यात करें। भारत बोल इन्हें बहाल नहीं कर सकता: यही आपकी गुमनामी की गारंटी है।',
   'receipts.export': 'रसीदें निर्यात करें',
   'receipts.import': 'रसीदें आयात करें',
   'receipts.imported': 'रसीदें आयात हुईं',
@@ -156,7 +156,7 @@ const hi: Record<keyof typeof en, string> = {
     'इससे आपका खाता, प्रोफ़ाइल और आपके सभी पक्ष स्थायी रूप से हट जाएँगे। गिनती उसी अनुसार घटेगी। इसे वापस नहीं किया जा सकता।',
   'profile.deleteConfirm': 'हाँ, सब कुछ मिटाएँ',
   'disclaimer':
-    'प्रजा एक स्वतंत्र, गैर-दलीय नागरिक मंच है। यह किसी सरकार, दल या चुनाव प्राधिकरण से संबद्ध नहीं है। ये संख्याएँ जन-भावना दर्शाती हैं — यह कोई चुनाव नहीं है।',
+    'भारत बोल एक स्वतंत्र, गैर-दलीय नागरिक मंच है। यह किसी सरकार, दल या चुनाव प्राधिकरण से संबद्ध नहीं है। ये संख्याएँ जन-भावना दर्शाती हैं — यह कोई चुनाव नहीं है।',
   'footer.about': 'परिचय व पारदर्शिता',
   'footer.data': 'आपका डेटा व अधिकार',
   'footer.source': 'ओपन सोर्स',
@@ -178,11 +178,11 @@ const Ctx = createContext<I18n>({ lang: 'en', setLang: () => {}, t: (k) => en[k]
 
 export function LangProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(() =>
-    localStorage.getItem('praja:lang') === 'hi' ? 'hi' : 'en'
+    localStorage.getItem('bharatbol:lang') === 'hi' ? 'hi' : 'en'
   );
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
-    localStorage.setItem('praja:lang', l);
+    localStorage.setItem('bharatbol:lang', l);
     document.documentElement.lang = l;
   }, []);
   const t = useCallback(

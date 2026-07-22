@@ -1,7 +1,7 @@
-/* Praja service worker — app-shell caching for a fast, installable PWA.
+/* BharatBol service worker — app-shell caching for a fast, installable PWA.
    Data (Supabase) is never cached here: counts must stay honest and live. */
-const SHELL = 'praja-shell-v1';
-const RUNTIME = 'praja-runtime-v1';
+const SHELL = 'bharatbol-shell-v1';
+const RUNTIME = 'bharatbol-runtime-v1';
 const SHELL_URLS = ['/', '/manifest.webmanifest', '/icons/icon.svg'];
 
 self.addEventListener('install', (e) => {

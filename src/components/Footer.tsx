@@ -29,7 +29,7 @@ export function Footer() {
           <span className="inline-block w-6 h-1 rounded bg-saffron" aria-hidden="true" />
           <span className="inline-block w-6 h-1 rounded bg-white border border-line" aria-hidden="true" />
           <span className="inline-block w-6 h-1 rounded bg-green" aria-hidden="true" />
-          <span className="ml-2">praja · {t('app.tagline')}</span>
+          <span className="ml-2">bharatbol · {t('app.tagline')}</span>
         </div>
         {!isLive && (
           <p className="text-xs text-saffron font-medium">{t('demo.banner')}</p>

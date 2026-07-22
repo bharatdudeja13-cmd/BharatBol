@@ -1,5 +1,5 @@
 /**
- * Praja blind-token client (RFC 9474 — RSABSSA-SHA384-PSS-Deterministic).
+ * BharatBol blind-token client (RFC 9474 — RSABSSA-SHA384-PSS-Deterministic).
  *
  * The browser generates a random token per stand, blinds it, and has the
  * registrar sign it WITHOUT seeing it. The unblinded (token, signature)
@@ -19,7 +19,7 @@ const te = new TextEncoder();
 
 /** Domain-separated message a registrar signature covers. */
 export function ballotMessage(standId: string, tokenHex: string): Uint8Array {
-  return te.encode(`praja:ballot:v1:${standId}:${tokenHex}`);
+  return te.encode(`bharatbol:ballot:v1:${standId}:${tokenHex}`);
 }
 
 export function randomTokenHex(): string {
@@ -79,7 +79,7 @@ export async function importRegistrarPublicKey(jwk: JsonWebKey): Promise<CryptoK
 
 // ---- Receipt store (this device only) ----
 
-const STORE_KEY = 'praja:receipts:v1';
+const STORE_KEY = 'bharatbol:receipts:v1';
 
 export function loadReceipts(): Receipt[] {
   try {
@@ -101,13 +101,13 @@ export function removeReceipt(standId: string): void {
 
 /** Export/import lets a citizen carry receipts to another device. */
 export function exportReceipts(): string {
-  return JSON.stringify({ praja_receipts: 1, receipts: loadReceipts() }, null, 2);
+  return JSON.stringify({ bharatbol_receipts: 1, receipts: loadReceipts() }, null, 2);
 }
 
 export function importReceipts(json: string): number {
-  const parsed = JSON.parse(json) as { praja_receipts?: number; receipts?: Receipt[] };
-  if (parsed.praja_receipts !== 1 || !Array.isArray(parsed.receipts)) {
-    throw new Error('not a Praja receipts file');
+  const parsed = JSON.parse(json) as { bharatbol_receipts?: number; receipts?: Receipt[] };
+  if (parsed.bharatbol_receipts !== 1 || !Array.isArray(parsed.receipts)) {
+    throw new Error('not a BharatBol receipts file');
   }
   for (const r of parsed.receipts) saveReceipt(r);
   return parsed.receipts.length;

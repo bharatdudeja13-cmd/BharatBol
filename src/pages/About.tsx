@@ -11,26 +11,26 @@ export default function About() {
         <p className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-sub">
           <AshokaChakra size={16} /> {t('app.kicker')}
         </p>
-        <h1 className="mt-3 font-display font-bold text-3xl text-navy">About Praja</h1>
+        <h1 className="mt-3 font-display font-bold text-3xl text-navy">About BharatBol</h1>
       </header>
 
       <section className="space-y-3">
         <h2 className="font-display font-semibold text-xl">The mission</h2>
         <p className="text-sub">
-          Praja (प्रजा — “the people”) is a national civic square. It exists so that any Indian
+          BharatBol (भारत बोल — “Bharat, speak”) is a national civic square. It exists so that any Indian
           citizen — whatever party they support, or none — can publicly stand on an issue and be
           counted, verifiably and in the open. It belongs to no movement and no party. It is a call
           to the whole country.
         </p>
         <p className="text-sub">
-          Praja’s one promise: <strong className="text-ink">prove how many, never show who.</strong>
+          BharatBol’s one promise: <strong className="text-ink">prove how many, never show who.</strong>
         </p>
       </section>
 
       <section className="space-y-3">
         <h2 className="font-display font-semibold text-xl">What the counts mean — honestly</h2>
         <p className="text-sub">
-          Every number on Praja counts <strong className="text-ink">verified engaged citizens</strong>:
+          Every number on BharatBol counts <strong className="text-ink">verified engaged citizens</strong>:
           people who signed in with a Google account and chose to stand. One account can stand once
           per issue — the database itself enforces this. A stand can be withdrawn at any time, and
           the count decreases accordingly.
@@ -47,8 +47,8 @@ export default function About() {
         <h2 className="font-display font-semibold text-xl">Rules of the square</h2>
         <ul className="list-disc pl-5 text-sub space-y-2">
           <li>Every stand is about an <strong className="text-ink">issue</strong> — never about a person, party, company, or community.</li>
-          <li>Praja never favours or attacks any party. It is the neutral layer above all of them.</li>
-          <li>Praja measures sentiment. It never instructs anyone to take any action.</li>
+          <li>BharatBol never favours or attacks any party. It is the neutral layer above all of them.</li>
+          <li>BharatBol measures sentiment. It never instructs anyone to take any action.</li>
           <li>Standing is free, requires no fee ever, and is revocable by you alone.</li>
         </ul>
       </section>
@@ -83,7 +83,7 @@ export default function About() {
       <section className="space-y-3">
         <h2 className="font-display font-semibold text-xl">Open source</h2>
         <p className="text-sub">
-          Praja’s entire codebase — including the database rules that keep identities private — is
+          BharatBol’s entire codebase — including the database rules that keep identities private — is
           public, so anyone can verify the promises above:{' '}
           <a href={REPO_URL} target="_blank" rel="noreferrer" className="text-navy underline underline-offset-4 break-all">
             {REPO_URL}

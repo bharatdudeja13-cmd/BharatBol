@@ -5,7 +5,7 @@
  *  - NO authentication. The browser must call this WITHOUT a user JWT;
  *    if one is attached anyway, it is ignored and never read.
  *  - The only admission test is the registrar's blind signature over
- *    `praja:ballot:v1:{stand_id}:{token}` — proof of "some eligible
+ *    `bharatbol:ballot:v1:{stand_id}:{token}` — proof of "some eligible
  *    account, exactly once", with no way to know which account.
  *  - Dedup = unique nullifier (sha256 of the signed message).
  *  - Inserted row: stand_id, nullifier, state (validated code or null),

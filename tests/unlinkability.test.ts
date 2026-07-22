@@ -178,7 +178,7 @@ describe('crypto: a curious registrar cannot link receipts to accounts', () => {
         const ok = await suite().verify(
           keys.publicKey,
           b64ToBytes(seen.blindSig),
-          new TextEncoder().encode(`praja:ballot:v1:${r.stand_id}:${r.token}`)
+          new TextEncoder().encode(`bharatbol:ballot:v1:${r.stand_id}:${r.token}`)
         );
         expect(ok).toBe(false);
       }

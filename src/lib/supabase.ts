@@ -15,7 +15,7 @@ export const isLive = supabase !== null;
 
 export const SITE_URL: string =
   (import.meta.env.VITE_SITE_URL as string | undefined) ||
-  (typeof window !== 'undefined' ? window.location.origin : 'https://praja.pages.dev');
+  (typeof window !== 'undefined' ? window.location.origin : 'https://bharatbol.pages.dev');
 
 export const REPO_URL: string =
-  (import.meta.env.VITE_REPO_URL as string | undefined) || 'https://github.com/your-org/praja';
+  (import.meta.env.VITE_REPO_URL as string | undefined) || 'https://github.com/bharatdudeja13-cmd/BharatBol';

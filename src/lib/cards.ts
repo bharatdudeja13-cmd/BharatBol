@@ -58,11 +58,14 @@ function base(ctx: CanvasRenderingContext2D) {
   drawChakra(ctx, W - 140, H - 160, 260, '#FFFFFF', 5);
   ctx.restore();
 
-  // Header: mark + wordmark.
+  // Header: mark + dual-weight wordmark (Bharat regular, Bol bold).
   drawChakra(ctx, 108, 112, 40, '#FFFFFF', 4);
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = '600 44px "IBM Plex Mono", monospace';
-  ctx.fillText('P R A J A', 176, 128);
+  ctx.font = '500 52px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('Bharat', 176, 130);
+  const bharatW = ctx.measureText('Bharat').width;
+  ctx.font = '800 52px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('Bol', 176 + bharatW + 6, 130);
 
   // Restrained tricolour rule under the header.
   const y = 176;
@@ -147,7 +150,7 @@ export async function drawProofCard(opts: {
   ctx.font = '600 44px Fraunces, serif';
   ctx.fillText('Where do you stand?', 72, y);
 
-  footer(ctx, opts.url, 'Praja — where India stands.', 'Independent · non-partisan · not an election');
+  footer(ctx, opts.url, 'BharatBol — where Bharat speaks.', 'Independent · non-partisan · not an election');
   return canvas;
 }
 
@@ -189,7 +192,7 @@ export async function drawCitizenCard(opts: {
     y += 30;
   }
 
-  footer(ctx, opts.url, 'Praja — where India stands.', 'Independent · non-partisan · not an election');
+  footer(ctx, opts.url, 'BharatBol — where Bharat speaks.', 'Independent · non-partisan · not an election');
   return canvas;
 }
 
@@ -203,7 +206,7 @@ export function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
 export async function shareCanvas(canvas: HTMLCanvasElement, text: string, url: string): Promise<boolean> {
   try {
     const blob = await canvasToBlob(canvas);
-    const file = new File([blob], 'praja-stand.png', { type: 'image/png' });
+    const file = new File([blob], 'bharatbol-stand.png', { type: 'image/png' });
     if (navigator.canShare?.({ files: [file] })) {
       await navigator.share({ files: [file], text, url });
       return true;

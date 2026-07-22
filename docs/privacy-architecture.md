@@ -1,4 +1,4 @@
-# Praja Phase 2 — the anonymous-token architecture (§1 design, for review)
+# BharatBol Phase 2 — the anonymous-token architecture (§1 design, for review)
 
 **Status: DRAFT — awaiting approval before any UI wiring.**
 Companion migration: [`supabase/phase2_privacy.sql`](../supabase/phase2_privacy.sql).
@@ -66,7 +66,7 @@ Per-stand counts keep meaning "citizens standing" (dedup is per stand).
 Crypto: RFC 9474 RSA blind signatures via `@cloudflare/blindrsa-ts` (audited, browser + Deno).
 Registrar private key lives in Edge Function secrets; the **public key is committed to the repo**
 so anyone can verify that only registrar-issued tokens can enter the log. Client receipts
-(token, signature, stand) live in `localStorage` under `praja:receipts`.
+(token, signature, stand) live in `localStorage` under `bharatbol:receipts`.
 
 ## Residual risks — stated, not hidden
 

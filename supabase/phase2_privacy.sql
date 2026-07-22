@@ -1,5 +1,5 @@
 -- ============================================================
--- Praja Phase 2 — DRAFT privacy-hardening migration (§1)
+-- BharatBol Phase 2 — DRAFT privacy-hardening migration (§1)
 -- Run AFTER schema.sql. Status: awaiting review — not yet wired
 -- to the UI. See docs/privacy-architecture.md for the full design.
 --

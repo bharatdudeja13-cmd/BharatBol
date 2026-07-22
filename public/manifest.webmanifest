@@ -1,7 +1,7 @@
 {
-  "name": "Praja — Where India stands",
-  "short_name": "Praja",
-  "description": "An independent, non-partisan civic square where any Indian citizen can stand on an issue and be counted.",
+  "name": "BharatBol — भारत बोल",
+  "short_name": "BharatBol",
+  "description": "An independent, non-partisan civic square where any Indian citizen can speak on an issue and be counted.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
