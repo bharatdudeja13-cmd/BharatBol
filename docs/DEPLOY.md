@@ -15,8 +15,14 @@ guardrails live in the [README](../README.md); the privacy design is in
    # paste the PUBLIC JWK into src/config/registrarKey.ts (commit it)
    supabase secrets set REGISTRAR_PRIVATE_JWK='<private jwk json>' \
                         REGISTRAR_PUBLIC_JWK='<public jwk json>'
-   supabase functions deploy registrar-issue ballot-cast ballot-withdraw
+   supabase functions deploy registrar-issue
+   supabase functions deploy ballot-cast ballot-withdraw --no-verify-jwt
    ```
+   `--no-verify-jwt` on the ballot functions is deliberate, not a shortcut: they are
+   anonymous by design (the registrar's blind signature is the only admission control),
+   and the gateway's JWT check would also reject the new non-JWT `sb_publishable_...`
+   API keys. `registrar-issue` keeps gateway JWT verification — it receives the user's
+   session JWT.
 4. **Authentication → Providers → Google**: enable it (create OAuth credentials in Google Cloud
    Console; authorized redirect URI = `https://<project-ref>.supabase.co/auth/v1/callback`).
 5. **Authentication → URL Configuration**: set Site URL to your Pages domain and add it to
