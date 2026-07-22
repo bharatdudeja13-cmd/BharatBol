@@ -11,25 +11,28 @@ guardrails live in the [README](../README.md); the privacy design is in
    [`supabase/phase2_privacy.sql`](../supabase/phase2_privacy.sql), then
    [`supabase/phase2b_public_log.sql`](../supabase/phase2b_public_log.sql),
    [`supabase/phase3_polls.sql`](../supabase/phase3_polls.sql),
-   [`supabase/phase4_feed.sql`](../supabase/phase4_feed.sql) and
-   [`supabase/phase5_feed_reactions.sql`](../supabase/phase5_feed_reactions.sql), once each, in that order.
-3. Generate the registrar key pair and deploy the Edge Functions:
+   [`supabase/phase4_feed.sql`](../supabase/phase4_feed.sql),
+   [`supabase/phase5_feed_reactions.sql`](../supabase/phase5_feed_reactions.sql) and
+   [`supabase/phase6_account_stands.sql`](../supabase/phase6_account_stands.sql), once each, in that order.
+3. Generate the registrar key pair and deploy Edge Functions (legacy blind path still
+   deployable; the **live app** uses account-linked `stand_commitments` /
+   `feed_item_reactions` via client RLS after phase6 — no ballot/react edge calls):
    ```bash
    node scripts/generate-registrar-key.mjs   # prints public + private JWK
    # paste the PUBLIC JWK into src/config/registrarKey.ts (commit it)
    supabase secrets set REGISTRAR_PRIVATE_JWK='<private jwk json>' \
                         REGISTRAR_PUBLIC_JWK='<public jwk json>'
-   supabase functions deploy registrar-issue
-   supabase functions deploy ballot-cast ballot-withdraw --no-verify-jwt
+   # Optional / legacy (not used by the current client while account-linked mode is on):
+   # supabase functions deploy registrar-issue
+   # supabase functions deploy ballot-cast ballot-withdraw --no-verify-jwt
+   # supabase functions deploy react-issue
+   # supabase functions deploy react-cast react-withdraw --no-verify-jwt
    supabase functions deploy feed-submit feed-moderate
    supabase functions deploy feed-report --no-verify-jwt
-   supabase functions deploy react-issue
-   supabase functions deploy react-cast react-withdraw --no-verify-jwt
    ```
    `feed-report` is intentionally unauthenticated: original creators and affected
    people may have no account, and a takedown route that requires a login is not a
    real takedown route. `feed-submit` and `feed-moderate` both require a user JWT.
-   `react-cast` / `react-withdraw` are anonymous (blind signature only), same as ballots.
 
    Moderators are rows in the sealed `admins` table — add yourself once:
    ```sql
@@ -38,11 +41,9 @@ guardrails live in the [README](../README.md); the privacy design is in
    Optional: `supabase secrets set INSTAGRAM_OEMBED_TOKEN='<facebook app token>'`
    to fetch Instagram thumbnails. Without it, Instagram items stay titled
    link-cards — BharatBol never scrapes.
-   `--no-verify-jwt` on the ballot functions is deliberate, not a shortcut: they are
-   anonymous by design (the registrar's blind signature is the only admission control),
-   and the gateway's JWT check would also reject the new non-JWT `sb_publishable_...`
-   API keys. `registrar-issue` keeps gateway JWT verification — it receives the user's
-   session JWT.
+   After phase6, stands and reactions are written under the signed-in account
+   (temporary §1 override). Restore blind ballots later via
+   [privacy-architecture.md](privacy-architecture.md).
 4. **Authentication → Providers → Google**: enable it (create OAuth credentials in Google Cloud
    Console; authorized redirect URI = `https://<project-ref>.supabase.co/auth/v1/callback`).
 5. **Authentication → URL Configuration**: set Site URL to your Pages domain and add it to

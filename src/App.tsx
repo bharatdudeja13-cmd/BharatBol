@@ -54,20 +54,12 @@ function JoinErrorToast() {
   const { joinError, clearJoinError } = useStands();
   const { t } = useI18n();
   if (!joinError) return null;
-  const msg =
-    joinError === 'locked'
-      ? t('join.locked')
-      : joinError === 'not-ready'
-        ? t('join.notReady')
-        : joinError === 'no-key'
-          ? t('join.noKey')
-          : t('misc.error');
   return (
     <div
       role="alert"
       className="fixed bottom-4 inset-x-4 z-50 mx-auto max-w-md card p-4 flex items-start gap-3 text-sm shadow-lift"
     >
-      <span className="flex-1">{msg}</span>
+      <span className="flex-1">{t('misc.error')}</span>
       <button className="text-sub hover:text-navy font-semibold" onClick={clearJoinError} aria-label="Dismiss">
         ✕
       </button>

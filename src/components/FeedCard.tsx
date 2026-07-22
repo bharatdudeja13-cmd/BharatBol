@@ -1,18 +1,27 @@
-import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { FeedItem } from '../lib/types';
 import { useI18n } from '../lib/i18n';
 import { issueLabel } from '../config/issues';
 import { stateName } from '../lib/states';
 import { PLATFORM_LABEL } from '../lib/feedUrl';
+import { evidenceWatchPath } from '../state/useEvidence';
+
+function poster(item: FeedItem): string | null {
+  if (item.thumbnail_url) return item.thumbnail_url;
+  if (item.platform === 'youtube') {
+    try {
+      const v = new URL(item.url).searchParams.get('v');
+      if (v) return `https://i.ytimg.com/vi/${v}/hqdefault.jpg`;
+    } catch {
+      /* ignore */
+    }
+  }
+  return null;
+}
 
 /**
- * One feed item. Link + embed only — BharatBol never re-hosts media.
- *
- * YouTube uses the official privacy-enhanced player, and only after the
- * viewer taps: no third-party request is made just by scrolling past.
- * X and Instagram render as titled link-cards that open the original
- * (Instagram thumbnails need a Facebook app token we do not assume).
- * Every card carries source, date and the "unverified" label.
+ * Feed list card. Playback always happens in /evidence — this card only
+ * previews and routes into the shared shorts player.
  */
 export function FeedCard({
   item,
@@ -22,43 +31,29 @@ export function FeedCard({
   onReport: (item: FeedItem) => void;
 }) {
   const { t, lang } = useI18n();
-  const [playing, setPlaying] = useState(false);
-
-  const ytId =
-    item.platform === 'youtube' ? new URL(item.url).searchParams.get('v') : null;
+  const watch = evidenceWatchPath({
+    issue: item.issue,
+    state: item.state,
+    id: item.id,
+  });
+  const img = poster(item);
 
   return (
     <article className="card overflow-hidden">
-      {item.platform === 'youtube' && ytId ? (
-        <div className="relative aspect-video bg-navyDeep">
-          {playing ? (
-            <iframe
-              className="absolute inset-0 w-full h-full"
-              src={`https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&rel=0`}
-              title={item.title ?? 'YouTube'}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture"
-              allowFullScreen
-              loading="lazy"
-            />
-          ) : (
-            <button
-              className="absolute inset-0 w-full h-full flex items-center justify-center group"
-              onClick={() => setPlaying(true)}
-              aria-label={`${t('feed.play')}: ${item.title ?? ''}`}
-            >
-              <img
-                src={item.thumbnail_url ?? `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`}
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover opacity-90"
-                loading="lazy"
-              />
-              <span className="relative z-10 rounded-full bg-white/95 text-navy font-semibold px-5 py-2.5 shadow-lift group-hover:scale-105 transition">
-                ▶ {t('feed.play')}
-              </span>
-            </button>
-          )}
-        </div>
-      ) : null}
+      <Link to={watch} className="block relative aspect-[9/16] max-h-80 bg-navyDeep sm:aspect-video sm:max-h-none">
+        {img ? (
+          <img src={img} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-white/70 text-sm">
+            {PLATFORM_LABEL[item.platform]}
+          </div>
+        )}
+        <span className="absolute inset-0 flex items-center justify-center">
+          <span className="rounded-full bg-white/95 text-navy font-semibold px-5 py-2.5 shadow-lift">
+            ▶ {t('evidence.watchAll')}
+          </span>
+        </span>
+      </Link>
 
       <div className="p-5 space-y-3">
         <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -75,22 +70,27 @@ export function FeedCard({
         </div>
 
         {item.title && (
-          <h3 className="font-display font-semibold text-lg leading-snug">{item.title}</h3>
+          <h3 className="font-display font-semibold text-lg leading-snug">
+            <Link to={watch} className="hover:text-navy">
+              {item.title}
+            </Link>
+          </h3>
         )}
-        {item.author_name && (
-          <p className="text-sm text-sub">{item.author_name}</p>
-        )}
+        {item.author_name && <p className="text-sm text-sub">{item.author_name}</p>}
 
         <p className="text-[11px] text-sub font-mono">⚠ {t('feed.unverified')}</p>
 
         <div className="flex flex-wrap items-center gap-3 pt-1">
+          <Link to={watch} className="btn-primary text-sm !py-2 !px-4">
+            {t('evidence.watchAll')}
+          </Link>
           <a
             href={item.url}
             target="_blank"
             rel="noreferrer noopener"
-            className="btn-secondary text-sm !py-2 !px-4"
+            className="text-xs text-sub underline underline-offset-4 hover:text-navy"
           >
-            {t('feed.openOn')} {PLATFORM_LABEL[item.platform]} ↗
+            {t('evidence.openOriginal')} ↗
           </a>
           <button
             className="text-xs text-sub underline underline-offset-4 hover:text-navy"

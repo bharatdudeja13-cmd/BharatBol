@@ -1,5 +1,7 @@
 # BharatBol Phase 2 — the anonymous-token architecture (§1 design, for review)
 
+> **Temporary product mode (phase6):** The live app currently stores stands and feed reactions under the signed-in Google account (`stand_commitments`, `feed_item_reactions`). That **overrides** cryptographic unlinkability until blind ballots are restored. Public UI still must not publish names on counts. Schema + client seams remain in this doc and in `supabase/phase2_privacy.sql` for a future restore. Feature flag comment: see `supabase/phase6_account_stands.sql`.
+
 **Status: DRAFT — awaiting approval before any UI wiring.**
 Companion migration: [`supabase/phase2_privacy.sql`](../supabase/phase2_privacy.sql).
 

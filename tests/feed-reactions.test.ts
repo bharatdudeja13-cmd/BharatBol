@@ -1,52 +1,39 @@
 /**
- * Reaction gate: useful/not-useful must inherit §1 unlinkability —
- * no user column on the public store, sealed issuance, distinct domain.
+ * Account-linked reactions (phase6 feed_item_reactions).
+ * Public counts only; rows are owner-RLS.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const root = join(__dirname, '..');
-const sql = readFileSync(join(root, 'supabase/phase5_feed_reactions.sql'), 'utf8');
+const sql = readFileSync(join(root, 'supabase/phase6_account_stands.sql'), 'utf8');
 const noComments = sql.replace(/--[^\n]*/g, '');
 const read = (p: string) => readFileSync(join(root, p), 'utf8');
 
 function tableBody(name: string): string {
-  const m = noComments.match(new RegExp(`create table public\\.${name}\\s*\\(([\\s\\S]*?)\\);`));
+  const m = noComments.match(new RegExp(`create table(?: if not exists)? public\\.${name}\\s*\\(([\\s\\S]*?)\\);`));
   if (!m) throw new Error(`table ${name} not found`);
   return m[1];
 }
 
-describe('feed reactions carry no identity', () => {
-  it('feed_reactions has no user column', () => {
-    const body = tableBody('feed_reactions');
-    expect(body).not.toMatch(/user_id/);
-    expect(body).not.toMatch(/auth\.users/);
-    expect(body).toMatch(/nullifier\s+text\s+not\s+null\s+unique/);
-    expect(body).toMatch(/value\s+text\s+not\s+null/);
+describe('account-linked feed reactions', () => {
+  it('feed_item_reactions is per-user with RLS', () => {
+    const body = tableBody('feed_item_reactions');
+    expect(body).toMatch(/user_id/);
+    expect(body).toMatch(/value/);
+    expect(noComments).toMatch(/react as self/);
   });
 
-  it('issuance ledger is sealed', () => {
-    expect(noComments).toMatch(/alter table public\.feed_reaction_issuance enable row level security/);
-    expect(noComments).not.toMatch(/create policy[^;]*on public\.feed_reaction_issuance/);
-    expect(noComments).not.toMatch(/grant[^;]*feed_reaction_issuance/);
+  it('feed_reaction_counts aggregates without user_id', () => {
+    expect(sql).toMatch(/create or replace view public\.feed_reaction_counts/);
+    expect(sql).toMatch(/from public\.feed_item_reactions/);
   });
 
-  it('signed message domain is distinct from stand ballots', () => {
-    expect(read('src/lib/blind.ts')).toMatch(/bharatbol:feedreact:v1/);
-    expect(read('supabase/functions/_shared/common.ts')).toMatch(/bharatbol:feedreact:v1/);
-    expect(read('src/lib/blind.ts')).toMatch(/bharatbol:ballot:v1/);
-  });
-
-  it('react-cast ignores user JWTs (anon key path)', () => {
-    const src = read('supabase/functions/react-cast/index.ts');
-    expect(src).toMatch(/No user JWT|anonymous/i);
-    expect(src).not.toMatch(/auth\.getUser/);
-  });
-
-  it('react-issue requires a signed-in user', () => {
-    const src = read('supabase/functions/react-issue/index.ts');
-    expect(src).toMatch(/auth\.getUser/);
-    expect(src).toMatch(/feed_reaction_issuance/);
+  it('EvidencePlayer uses account upsert, not blind react-issue', () => {
+    const src = read('src/pages/EvidencePlayer.tsx');
+    expect(src).toMatch(/feed_item_reactions/);
+    expect(src).not.toMatch(/react-issue/);
+    expect(src).not.toMatch(/blindForReact/);
   });
 });

@@ -121,10 +121,10 @@ describe('link + embed, never re-host', () => {
     }
   });
 
-  it('YouTube embeds use the privacy-enhanced host and load on tap', () => {
-    const src = read('src/components/FeedCard.tsx');
+  it('YouTube embeds use the privacy-enhanced host in the shared player', () => {
+    const src = read('src/pages/EvidencePlayer.tsx');
     expect(src).toMatch(/youtube-nocookie\.com/);
-    expect(src).toMatch(/playing \?/);
+    expect(read('src/components/FeedCard.tsx')).toMatch(/evidenceWatchPath/);
   });
 
   it('every card carries the unverified provenance label', () => {
