@@ -91,6 +91,16 @@ export default function About() {
       </section>
 
       <section className="space-y-3">
+        <h2 className="font-display font-semibold text-xl">{t('verify.title')}</h2>
+        <p className="text-sub">
+          {t('verify.checkpoints')}{' '}
+          <Link to="/verify" className="text-navy underline underline-offset-4">
+            {t('verify.title')} →
+          </Link>
+        </p>
+      </section>
+
+      <section className="space-y-3">
         <h2 className="font-display font-semibold text-xl">Open source</h2>
         <p className="text-sub">
           BharatBol’s entire codebase — including the database rules that keep identities private — is

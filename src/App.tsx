@@ -14,6 +14,7 @@ import StandDetail from './pages/StandDetail';
 import Me from './pages/Me';
 import About from './pages/About';
 import DataRights from './pages/DataRights';
+import Verify from './pages/Verify';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -62,6 +63,7 @@ export default function App() {
                 <Route path="/me" element={<Me />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/data-rights" element={<DataRights />} />
+                <Route path="/verify" element={<Verify />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </main>
