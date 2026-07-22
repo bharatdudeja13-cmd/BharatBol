@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../state/AuthProvider';
 import { useStands } from '../state/StandsProvider';
@@ -6,10 +6,11 @@ import { useI18n } from '../lib/i18n';
 import { STATES, stateName } from '../lib/states';
 import { isLive, SITE_URL } from '../lib/supabase';
 import { drawCitizenCard, shareCanvas, downloadCanvas } from '../lib/cards';
+import { exportReceipts, importReceipts, loadReceipts } from '../lib/blind';
 
 export default function Me() {
   const { session, profile, saveProfile, deleteAccount, signIn } = useAuth();
-  const { stands, joined, withdraw } = useStands();
+  const { stands, joined, withdraw, withdrawAll, syncWall, refreshReceipts } = useStands();
   const { t, lang } = useI18n();
 
   const [name, setName] = useState('');
@@ -20,6 +21,8 @@ export default function Me() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [cardUrl, setCardUrl] = useState('');
   const [cardCanvas, setCardCanvas] = useState<HTMLCanvasElement | null>(null);
+  const [imported, setImported] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setName(profile?.first_name ?? '');
@@ -68,12 +71,30 @@ export default function Me() {
   const save = async () => {
     setBusy(true);
     try {
-      await saveProfile({ first_name: name.trim(), state: state || null, show_on_wall: onWall });
+      const next = await saveProfile({ first_name: name.trim(), state: state || null, show_on_wall: onWall });
+      // Re-opting into the wall can only be done from the client — the server
+      // has no idea which stands this account took (that's the design).
+      if (next?.show_on_wall) await syncWall(next);
       setSaved(true);
       window.setTimeout(() => setSaved(false), 2000);
     } finally {
       setBusy(false);
     }
+  };
+
+  const doExport = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([exportReceipts()], { type: 'application/json' }));
+    a.download = 'praja-receipts.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const doImport = async (file: File) => {
+    importReceipts(await file.text());
+    refreshReceipts();
+    setImported(true);
+    window.setTimeout(() => setImported(false), 2500);
   };
 
   return (
@@ -177,6 +198,33 @@ export default function Me() {
         )}
       </section>
 
+      {/* Ballot receipts — the anonymous proof, this device only */}
+      {isLive && (
+        <section className="card p-6">
+          <h2 className="font-display font-semibold text-lg text-ink">{t('receipts.title')}</h2>
+          <p className="mt-2 text-sm text-sub leading-relaxed">{t('receipts.explain')}</p>
+          <div className="mt-4 flex flex-wrap gap-3 items-center">
+            <button className="btn-secondary text-sm" onClick={doExport} disabled={loadReceipts().length === 0}>
+              {t('receipts.export')}
+            </button>
+            <button className="btn-secondary text-sm" onClick={() => fileRef.current?.click()}>
+              {imported ? '✓ ' + t('receipts.imported') : t('receipts.import')}
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void doImport(f);
+                e.target.value = '';
+              }}
+            />
+          </div>
+        </section>
+      )}
+
       {/* Danger zone — DPDP erasure */}
       {isLive && (
         <section className="card p-6 border-saffron/40">
@@ -189,7 +237,14 @@ export default function Me() {
               </button>
               <button
                 className="btn-primary !bg-saffron hover:!bg-saffron/90"
-                onClick={() => void deleteAccount()}
+                onClick={() =>
+                  void (async () => {
+                    // Withdraw locally-known ballots first so every count
+                    // decrements — the server cannot do this for us.
+                    await withdrawAll();
+                    await deleteAccount();
+                  })()
+                }
               >
                 {t('profile.deleteConfirm')}
               </button>

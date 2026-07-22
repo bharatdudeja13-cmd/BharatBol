@@ -44,7 +44,7 @@ export default function Home() {
         <h1 className="mt-6 font-display font-bold text-navy leading-none">
           <LiveNumber value={national} className="block text-6xl sm:text-8xl tabular-nums" />
           <span className="block mt-3 text-xl sm:text-2xl font-semibold text-ink">
-            {t('counts.standing')}
+            {t('counts.taken')}
             {todayTotal > 0 && (
               <span className="text-green"> · +{fmt(todayTotal)} {t('counts.today')}</span>
             )}

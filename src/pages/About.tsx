@@ -56,18 +56,23 @@ export default function About() {
       <section className="space-y-3">
         <h2 className="font-display font-semibold text-xl">Privacy — the honest version</h2>
         <p className="text-sub">
-          Publicly, Praja shows only aggregate counts and — with your explicit permission — your
-          first name and state on the supporter wall. No public page or public database view carries
-          your account identity, email, or full name. You can opt out of the wall, or erase your
-          account and all your data, at any time from your profile.
+          Your stands are recorded as <strong className="text-ink">anonymous ballots</strong>. When
+          you sign in, your browser obtains blind-signed tokens (RFC 9474) for every live issue at
+          once — so the record of issuing them says nothing about what you support — and casting a
+          stand presents a token the system provably cannot connect back to any account.
+          Account-to-stand linkage is{' '}
+          <strong className="text-ink">prevented by design in everything the database stores</strong>:
+          the ballot log has no account column at all, and this claim is enforced by automated tests
+          in our open-source repository.
         </p>
         <p className="text-sub">
-          One honest trade-off in this first version: to guarantee one-account-one-stand, our
-          private database stores which account stood on which issue. That table is never publicly
-          readable and is never joined into anything public — but it means the database itself could
-          internally link an account to a stand. For neutral, broadly agreeable issues like the ones
-          here, we consider that acceptable. Until we ship the fully unlinkable design, Praja will
-          not host any sensitive stands. See{' '}
+          The honest limits: infrastructure request logs (timing, IP) could in principle correlate
+          activity — running the token issuer and the ballot store under separate operators is the
+          real fix, and it is on our roadmap. The proof of your own ballots (your receipts) lives
+          only in your browser; export them from your profile to withdraw from another device.
+          Appearing on the supporter wall is separate and purely voluntary: choosing it links that
+          stand to your account in our private database so you keep the right to rename, opt out,
+          or erase it — skip the wall to stay fully anonymous. See{' '}
           <Link to="/data-rights" className="text-navy underline underline-offset-4">
             your data &amp; rights
           </Link>{' '}

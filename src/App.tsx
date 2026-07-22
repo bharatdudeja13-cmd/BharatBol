@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
-import { LangProvider } from './lib/i18n';
+import { LangProvider, useI18n } from './lib/i18n';
+import { useStands } from './state/StandsProvider';
 import { AuthProvider } from './state/AuthProvider';
 import { StandsProvider } from './state/StandsProvider';
 import { Header } from './components/Header';
@@ -18,6 +19,31 @@ function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => window.scrollTo(0, 0), [pathname]);
   return null;
+}
+
+function JoinErrorToast() {
+  const { joinError, clearJoinError } = useStands();
+  const { t } = useI18n();
+  if (!joinError) return null;
+  const msg =
+    joinError === 'locked'
+      ? t('join.locked')
+      : joinError === 'not-ready'
+        ? t('join.notReady')
+        : joinError === 'no-key'
+          ? t('join.noKey')
+          : t('misc.error');
+  return (
+    <div
+      role="alert"
+      className="fixed bottom-4 inset-x-4 z-50 mx-auto max-w-md card p-4 flex items-start gap-3 text-sm shadow-lift"
+    >
+      <span className="flex-1">{msg}</span>
+      <button className="text-sub hover:text-navy font-semibold" onClick={clearJoinError} aria-label="Dismiss">
+        ✕
+      </button>
+    </div>
+  );
 }
 
 export default function App() {
@@ -43,6 +69,7 @@ export default function App() {
           </div>
           <ProfileGateModal />
           <ShareSheet />
+          <JoinErrorToast />
         </StandsProvider>
       </AuthProvider>
     </LangProvider>

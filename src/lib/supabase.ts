@@ -3,6 +3,10 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
+export const SUPABASE_URL = url ?? '';
+/** The anon key is public by design; ballot casts send ONLY this (never a user JWT). */
+export const SUPABASE_ANON_KEY = anon ?? '';
+
 /** Null when env is not configured — the app then runs in local demo mode. */
 export const supabase: SupabaseClient | null =
   url && anon ? createClient(url, anon) : null;

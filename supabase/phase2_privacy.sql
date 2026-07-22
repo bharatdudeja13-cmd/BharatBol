@@ -72,6 +72,9 @@ create table public.ballots (
   joined_on date not null default (now() at time zone 'Asia/Kolkata')::date
 );
 create index ballots_stand_idx on public.ballots (stand_id, joined_on);
+-- Realtime DELETE events must carry stand_id/state so live counters can
+-- decrement on withdrawal. Every column here is public anyway.
+alter table public.ballots replica identity full;
 alter table public.ballots enable row level security;
 create policy "ballots are public, read-only"
   on public.ballots for select using (true);

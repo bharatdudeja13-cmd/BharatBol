@@ -37,15 +37,19 @@ The whole product rests on a few small pieces. If you audit anything, audit thes
 
 | Path | What it guarantees |
 | --- | --- |
-| [`supabase/schema.sql`](supabase/schema.sql) | The entire privacy model. `stand_joins` (the only table linking an account to a stand) is **never publicly selectable** and never joined into any public view. Everything public reads from `wall_events`, which has **no user_id column at all**. `unique(stand_id, user_id)` keeps counts honest. Erasure cascades: deleting the auth user removes profile, joins, and wall entries — counts drop accordingly. |
-| [`src/state/StandsProvider.tsx`](src/state/StandsProvider.tsx) | Counting: initial load from aggregate views, realtime bumps from `wall_events` inserts, optimistic UI de-duplicated by `join_id`. |
+| [`supabase/phase2_privacy.sql`](supabase/phase2_privacy.sql) | The privacy model. Stands are recorded as **anonymous ballots**: the `ballots` table has no user column and no FK to `auth.users`; dedup comes from a unique nullifier, not identity. The registrar's `token_issuance` ledger (RLS, zero policies, zero grants) records only that an account was issued blind tokens **for every live stand at once** — it carries no preference signal. The wall is voluntary publicity, account-linked *by consent* so it stays editable and erasable. |
+| [`docs/privacy-architecture.md`](docs/privacy-architecture.md) | The full design in plain language: RFC 9474 blind signatures, why each promise holds, and the residual risks stated honestly (platform log timing/IP correlation; two-operator split is the roadmap fix). |
+| [`supabase/functions/`](supabase/functions/) | `registrar-issue` (authed; blind-signs; never touches ballots) · `ballot-cast` / `ballot-withdraw` (unauthenticated; verify the blind signature; nullifier dedup). Identity and ballots never meet in one process. |
+| [`tests/unlinkability.test.ts`](tests/unlinkability.test.ts) | **The acceptance gate**: automated assertions that no query path yields account↔ballot, the registrar ledger is sealed, erasure cascades, and a simulated curious registrar fails to link receipts to accounts. Run with `npm test`. |
+| [`src/lib/blind.ts`](src/lib/blind.ts) + [`src/state/StandsProvider.tsx`](src/state/StandsProvider.tsx) | Client protocol: blind → issue → finalize → cast **without a user JWT**. Receipts (the only proof of your own ballots) live in the browser, exportable/importable from the profile page. |
 | [`src/lib/cards.ts`](src/lib/cards.ts) | Share cards are drawn entirely client-side; nothing is uploaded. |
-| [`src/pages/About.tsx`](src/pages/About.tsx) | The honest-count methodology and the plainly stated MVP privacy trade-off. |
 
-**The honest MVP trade-off** (also stated on the About page): to guarantee one-account-one-stand,
-the private `stand_joins` table stores `user_id` per stand. The database could therefore
-*internally* link account → stand. Acceptable for neutral, low-risk stands; not the full
-unlinkable design. Do not add sensitive stands until that hardening ships.
+**Honest limits** (also on the About page): the database stores no account↔stand link — that is
+now enforced by schema and tests, and it is why the national headline counts *stands taken*
+(distinct citizens across stands is uncomputable, by design). Infrastructure request logs could
+in principle correlate by timing/IP; running registrar and ballot store under separate operators
+is the real fix and is on the roadmap. Losing your browser's receipts means nobody — including
+us — can withdraw or link your anonymous ballots.
 
 ## Guardrails (non-negotiable)
 
@@ -67,10 +71,19 @@ npm run dev          # demo mode: sample data, no backend needed
 ### 1. Supabase
 
 1. Create a free project at [supabase.com](https://supabase.com).
-2. Open the **SQL editor** and run [`supabase/schema.sql`](supabase/schema.sql) once.
-3. **Authentication → Providers → Google**: enable it (create OAuth credentials in Google Cloud
+2. Open the **SQL editor** and run [`supabase/schema.sql`](supabase/schema.sql), then
+   [`supabase/phase2_privacy.sql`](supabase/phase2_privacy.sql), once each, in that order.
+3. Generate the registrar key pair and deploy the Edge Functions:
+   ```bash
+   node scripts/generate-registrar-key.mjs   # prints public + private JWK
+   # paste the PUBLIC JWK into src/config/registrarKey.ts (commit it)
+   supabase secrets set REGISTRAR_PRIVATE_JWK='<private jwk json>' \
+                        REGISTRAR_PUBLIC_JWK='<public jwk json>'
+   supabase functions deploy registrar-issue ballot-cast ballot-withdraw
+   ```
+4. **Authentication → Providers → Google**: enable it (create OAuth credentials in Google Cloud
    Console; authorized redirect URI = `https://<project-ref>.supabase.co/auth/v1/callback`).
-4. **Authentication → URL Configuration**: set Site URL to your Pages domain
+5. **Authentication → URL Configuration**: set Site URL to your Pages domain
    (e.g. `https://praja.pages.dev`) and add it to Redirect URLs (plus `http://localhost:5173`
    for development).
 
