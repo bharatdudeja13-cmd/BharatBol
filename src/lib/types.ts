@@ -26,3 +26,19 @@ export type Profile = {
   state: string | null;
   show_on_wall: boolean;
 };
+
+export type FeedItem = {
+  id: string;
+  url: string;
+  platform: 'youtube' | 'x' | 'instagram';
+  title: string | null;
+  author_name: string | null;
+  thumbnail_url: string | null;
+  issue: string;
+  state: string | null;
+  status: string;
+  flagged?: boolean;
+  reports?: number;
+  submitted_on: string;
+  approved_at: string | null;
+};

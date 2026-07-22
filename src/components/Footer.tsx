@@ -29,6 +29,9 @@ export function Footer() {
           <Link to="/verify" className="hover:underline underline-offset-4">
             {t('verify.title')}
           </Link>
+          <Link to="/moderation" className="hover:underline underline-offset-4">
+            {t('policy.title')}
+          </Link>
           <a href={REPO_URL} target="_blank" rel="noreferrer" className="hover:underline underline-offset-4">
             {t('footer.source')}
           </a>

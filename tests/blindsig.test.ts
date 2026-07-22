@@ -70,8 +70,14 @@ describe('blind signature roundtrip', () => {
       modulusLength: 2048,
     });
     const session = await blindForStand(keys.publicKey, STAND_A);
-    const rogueSig = await suite().blindSign(rogue.privateKey, b64ToBytes(session.blinded_b64));
-    await expect(finalizeReceipt(keys.publicKey, session, bytesToB64(rogueSig))).rejects.toThrow();
+    // Signing with a foreign key may itself throw ("representative out of
+    // range") depending on the rogue modulus — either way the receipt must
+    // never be accepted, so assert over the whole attempt.
+    const attempt = async () => {
+      const rogueSig = await suite().blindSign(rogue.privateKey, b64ToBytes(session.blinded_b64));
+      return finalizeReceipt(keys.publicKey, session, bytesToB64(rogueSig));
+    };
+    await expect(attempt()).rejects.toThrow();
   }, 60000);
 });
 
