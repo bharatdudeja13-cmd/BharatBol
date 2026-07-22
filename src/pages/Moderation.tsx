@@ -13,7 +13,7 @@ export default function Moderation() {
   const RULES: [string, string][] = [
     [
       'Identifying anyone',
-      'Nothing that identifies or exposes a private person, protester, police officer, official or bystander — no names, faces used to identify, addresses, phone numbers, ID numbers, or workplaces.',
+      'Nothing that identifies or exposes a private person, protester, police officer, official or bystander - no names, faces used to identify, addresses, phone numbers, ID numbers, or workplaces.',
     ],
     ['Graphic violence', 'No gore, injury, death or violent imagery.'],
     [
@@ -23,13 +23,13 @@ export default function Moderation() {
     ['Sexual content', 'No sexual or explicit content.'],
     ['Minors', 'Nothing that identifies, endangers or exploits a minor.'],
     ['Clear misinformation', 'Nothing demonstrably false presented as fact.'],
-    ['Off-topic', 'The feed is for civic issues in India — not general entertainment or promotion.'],
+    ['Off-topic', 'The feed is for civic issues in India - not general entertainment or promotion.'],
   ];
 
   const RULES_HI: [string, string][] = [
     [
       'किसी की पहचान उजागर करना',
-      'ऐसा कुछ नहीं जो किसी निजी व्यक्ति, प्रदर्शनकारी, पुलिसकर्मी, अधिकारी या राहगीर की पहचान उजागर करे — नाम, पहचान के लिए इस्तेमाल चेहरे, पते, फ़ोन नंबर, पहचान संख्या या कार्यस्थल नहीं।',
+      'ऐसा कुछ नहीं जो किसी निजी व्यक्ति, प्रदर्शनकारी, पुलिसकर्मी, अधिकारी या राहगीर की पहचान उजागर करे - नाम, पहचान के लिए इस्तेमाल चेहरे, पते, फ़ोन नंबर, पहचान संख्या या कार्यस्थल नहीं।',
     ],
     ['वीभत्स हिंसा', 'खून-ख़राबा, चोट, मृत्यु या हिंसक दृश्य नहीं।'],
     [
@@ -39,7 +39,7 @@ export default function Moderation() {
     ['यौन सामग्री', 'यौन या अश्लील सामग्री नहीं।'],
     ['नाबालिग', 'ऐसा कुछ नहीं जो किसी नाबालिग की पहचान उजागर करे या उसे ख़तरे में डाले।'],
     ['स्पष्ट ग़लत जानकारी', 'ऐसा कुछ नहीं जो प्रमाणित रूप से झूठा हो और तथ्य की तरह प्रस्तुत हो।'],
-    ['विषय से बाहर', 'यह फ़ीड भारत के नागरिक मुद्दों के लिए है — सामान्य मनोरंजन या प्रचार के लिए नहीं।'],
+    ['विषय से बाहर', 'यह फ़ीड भारत के नागरिक मुद्दों के लिए है - सामान्य मनोरंजन या प्रचार के लिए नहीं।'],
   ];
 
   return (
@@ -73,8 +73,8 @@ export default function Moderation() {
         </h2>
         <p className="text-sub">
           {hi
-            ? 'केवल लिंक और प्लेटफ़ॉर्म द्वारा सार्वजनिक रूप से दी गई जानकारी (शीर्षक, रचनाकार, थंबनेल का पता)। कोई वीडियो या तस्वीर यहाँ कॉपी या होस्ट नहीं की जाती — सब कुछ मूल प्लेटफ़ॉर्म से ही दिखता है। मूल पोस्ट हटते ही वह यहाँ से भी चला जाता है।'
-            : 'Only the link and the metadata the platform itself publishes (title, creator, thumbnail address). No video or image is copied or hosted here — everything plays from the original platform. If the original is deleted, it is gone here too.'}
+            ? 'केवल लिंक और प्लेटफ़ॉर्म द्वारा सार्वजनिक रूप से दी गई जानकारी (शीर्षक, रचनाकार, थंबनेल का पता)। कोई वीडियो या तस्वीर यहाँ कॉपी या होस्ट नहीं की जाती - सब कुछ मूल प्लेटफ़ॉर्म से ही दिखता है। मूल पोस्ट हटते ही वह यहाँ से भी चला जाता है।'
+            : 'Only the link and the metadata the platform itself publishes (title, creator, thumbnail address). No video or image is copied or hosted here - everything plays from the original platform. If the original is deleted, it is gone here too.'}
         </p>
         <p className="text-sub">
           {hi
@@ -89,8 +89,8 @@ export default function Moderation() {
         </h2>
         <p className="text-sub">
           {hi
-            ? 'हर पोस्ट पर “रिपोर्ट करें” बटन है — खाते की ज़रूरत नहीं। रिपोर्ट होते ही वह सार्वजनिक फ़ीड से हट जाता है और दोबारा जाँच के बाद ही लौटता है।'
-            : 'Every item has a Report button — no account needed. A reported item leaves the public feed immediately and only returns after a human re-reviews it.'}
+            ? 'हर पोस्ट पर “रिपोर्ट करें” बटन है - खाते की ज़रूरत नहीं। रिपोर्ट होते ही वह सार्वजनिक फ़ीड से हट जाता है और दोबारा जाँच के बाद ही लौटता है।'
+            : 'Every item has a Report button - no account needed. A reported item leaves the public feed immediately and only returns after a human re-reviews it.'}
         </p>
       </section>
 
@@ -100,8 +100,8 @@ export default function Moderation() {
         </h2>
         <p className="text-sub">
           {hi
-            ? 'फ़ीड की हर सामग्री “असत्यापित” चिह्नित है। भारत बोल यह पुष्टि नहीं करता कि किसी पोस्ट में दिखाई या कही गई बात सच है — यह केवल मूल पोस्ट तक ले जाता है, ताकि आप ख़ुद देखें।'
-            : 'Every feed item is labelled “unverified”. BharatBol does not certify that anything shown or claimed in a post is true — it links you to the original so you can judge it yourself.'}
+            ? 'फ़ीड की हर सामग्री “असत्यापित” चिह्नित है। भारत बोल यह पुष्टि नहीं करता कि किसी पोस्ट में दिखाई या कही गई बात सच है - यह केवल मूल पोस्ट तक ले जाता है, ताकि आप ख़ुद देखें।'
+            : 'Every feed item is labelled “unverified”. BharatBol does not certify that anything shown or claimed in a post is true - it links you to the original so you can judge it yourself.'}
         </p>
       </section>
 

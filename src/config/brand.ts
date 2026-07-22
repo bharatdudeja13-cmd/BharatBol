@@ -1,5 +1,5 @@
 /**
- * BharatBol brand constants — the single source for name, taglines,
+ * BharatBol brand constants - the single source for name, taglines,
  * hashtag, and share copy. All share templates are editable constants
  * and MUST stay issue-framed and non-partisan (guardrails §7).
  */
@@ -21,20 +21,20 @@ export const TAGLINES = {
 
 /**
  * Prewritten share copy. Placeholders: {issue} {n} {link} {tag}.
- * Every string is issue-framed — never a person, party, company, or community.
+ * Every string is issue-framed - never a person, party, company, or community.
  */
 export const SHARE_TEMPLATES = {
   whatsapp: {
-    en: 'I spoke on BharatBol — {issue}. Your voice counts too 👉 {link} #BharatBol {tag}',
-    hi: 'मैंने BharatBol पर अपनी बात रखी — {issue}. तुम भी बोलो 👉 {link} #BharatBol {tag}',
+    en: 'I spoke on BharatBol - {issue}. Your voice counts too 👉 {link} #BharatBol {tag}',
+    hi: 'मैंने BharatBol पर अपनी बात रखी - {issue}. तुम भी बोलो 👉 {link} #BharatBol {tag}',
   },
   x: {
     en: '{n} people said {issue} matters. Where do you stand? Bharat, bol. {link} #BharatBol {tag}',
-    hi: '{n} लोगों ने कहा — {issue} मायने रखता है। आप कहाँ खड़े हैं? भारत, बोल। {link} #BharatBol {tag}',
+    hi: '{n} लोगों ने कहा - {issue} मायने रखता है। आप कहाँ खड़े हैं? भारत, बोल। {link} #BharatBol {tag}',
   },
   caption: {
-    en: 'मैंने बोला। I spoke — {issue}. {n} voices and counting. Add yours 👉 {link} #BharatBol {tag}',
-    hi: 'मैंने बोला। — {issue}. {n} आवाज़ें, और बढ़ रही हैं। अपनी जोड़ें 👉 {link} #BharatBol {tag}',
+    en: 'मैंने बोला। I spoke - {issue}. {n} voices and counting. Add yours 👉 {link} #BharatBol {tag}',
+    hi: 'मैंने बोला। - {issue}. {n} आवाज़ें, और बढ़ रही हैं। अपनी जोड़ें 👉 {link} #BharatBol {tag}',
   },
 } as const;
 

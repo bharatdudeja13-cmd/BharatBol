@@ -6,9 +6,10 @@ import { useI18n } from '../lib/i18n';
 import { ISSUES, issueLabel } from '../config/issues';
 import { STATES, stateName } from '../lib/states';
 import { FeedCard } from '../components/FeedCard';
-import { EvidenceStrip } from '../components/EvidenceStrip';
 import { evidenceWatchPath } from '../state/useEvidence';
-import type { FeedItem } from '../lib/types';
+import { fmt } from '../lib/format';
+import type { FeedItem, Stand } from '../lib/types';
+import { PwaInstallButton } from '../components/PwaInstallButton';
 
 const REPORT_REASONS = [
   'doxxing', 'violence', 'targeting', 'sexual', 'minor', 'misinfo', 'offtopic', 'copyright', 'other',
@@ -16,7 +17,7 @@ const REPORT_REASONS = [
 
 export default function Feed() {
   const { items, loading, reload } = useFeed();
-  const { stands } = useStands();
+  const { stands, counts } = useStands();
   const { t, lang } = useI18n();
   const [issue, setIssue] = useState<string>('');
   const [state, setState] = useState<string>('');
@@ -32,11 +33,27 @@ export default function Feed() {
     [items, issue, state]
   );
 
-  // Close the loop: when filtered to an issue, offer the matching Stand.
-  const relatedStand = useMemo(
-    () => (issue ? stands.find((s) => s.category === issue) : undefined),
-    [issue, stands]
-  );
+  /** Group evidences under matching open stands (by issue category). */
+  const groups = useMemo(() => {
+    const byIssue = new Map<string, FeedItem[]>();
+    for (const item of filtered) {
+      const list = byIssue.get(item.issue) ?? [];
+      list.push(item);
+      byIssue.set(item.issue, list);
+    }
+    const out: { stand: Stand | null; issue: string; items: FeedItem[] }[] = [];
+    for (const stand of stands) {
+      const list = byIssue.get(stand.category);
+      if (list?.length) {
+        out.push({ stand, issue: stand.category, items: list });
+        byIssue.delete(stand.category);
+      }
+    }
+    for (const [iss, list] of byIssue) {
+      out.push({ stand: null, issue: iss, items: list });
+    }
+    return out;
+  }, [filtered, stands]);
 
   const submitReport = async () => {
     if (!reporting || !reason) return;
@@ -59,16 +76,13 @@ export default function Feed() {
           <Link to="/add" className="btn-primary text-sm !py-2 !px-4">
             + {t('nav.add')}
           </Link>
-          <Link
-            to={evidenceWatchPath({ issue: issue || null, state: state || null })}
-            className="btn-secondary text-sm !py-2 !px-4 text-center"
-          >
+          <Link to="/evidence" className="btn-secondary text-sm !py-2 !px-4 text-center">
             {t('evidence.watchAll')}
           </Link>
+          <PwaInstallButton className="btn-ghost text-sm !py-2 !px-4" />
         </div>
       </div>
 
-      {/* Filters */}
       <div className="mt-6 space-y-3">
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
           <button
@@ -106,44 +120,60 @@ export default function Feed() {
         </select>
       </div>
 
-      <div className="mt-6">
-        <EvidenceStrip
-          items={filtered.slice(0, 24)}
-          issue={issue || null}
-          state={state || null}
-        />
-      </div>
-
-      {/* Loop-back to counted action */}
-      {relatedStand && (
-        <Link
-          to={`/stand/${relatedStand.id}`}
-          className="card mt-6 p-5 flex items-center justify-between gap-4 hover:border-navy transition"
-        >
-          <div>
-            <p className="text-xs font-mono uppercase tracking-wide text-saffron">{t('feed.loop')}</p>
-            <p className="font-display font-semibold mt-1">
-              {lang === 'hi' && relatedStand.title_hi ? relatedStand.title_hi : relatedStand.title}
-            </p>
-          </div>
-          <span className="text-navy font-semibold shrink-0">→</span>
-        </Link>
-      )}
-
       {reported && (
         <p className="mt-6 card p-4 text-sm text-green font-medium">{t('feed.reportSent')}</p>
       )}
 
-      {/* Items */}
       {loading ? (
         <p className="mt-10 text-sub">{t('misc.loading')}</p>
-      ) : filtered.length === 0 ? (
+      ) : groups.length === 0 ? (
         <p className="mt-10 text-sub">{t('feed.empty')}</p>
       ) : (
-        <div className="mt-6 space-y-5">
-          {filtered.map((item) => (
-            <FeedCard key={item.id} item={item} onReport={setReporting} />
-          ))}
+        <div className="mt-8 space-y-10">
+          {groups.map((g) => {
+            const title = g.stand
+              ? lang === 'hi' && g.stand.title_hi
+                ? g.stand.title_hi
+                : g.stand.title
+              : issueLabel(g.issue, lang);
+            const standing = g.stand ? counts[g.stand.id]?.total ?? 0 : 0;
+            return (
+              <section key={g.stand?.id ?? g.issue} className="space-y-4">
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <h2 className="font-display font-semibold text-xl text-navy">{title}</h2>
+                    <p className="text-xs text-sub mt-1">
+                      {fmt(g.items.length)} {t('evidence.clipCount')}
+                      {g.stand ? ` · ${fmt(standing)} ${t('counts.standing')}` : ''}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      to={evidenceWatchPath({
+                        issue: g.issue,
+                        state: state || null,
+                        stand: g.stand?.id,
+                        id: g.items[0]?.id,
+                      })}
+                      className="btn-primary text-sm !py-2 !px-4"
+                    >
+                      {t('evidence.watchAll')}
+                    </Link>
+                    {g.stand && (
+                      <Link to={`/stand/${g.stand.id}`} className="btn-secondary text-sm !py-2 !px-4">
+                        {t('stand.standWith')}
+                      </Link>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-5">
+                  {g.items.map((item) => (
+                    <FeedCard key={item.id} item={item} onReport={setReporting} />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
         </div>
       )}
 
@@ -153,7 +183,6 @@ export default function Feed() {
         </Link>
       </p>
 
-      {/* Report dialog */}
       {reporting && (
         <div
           className="fixed inset-0 z-50 bg-navyDeep/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"

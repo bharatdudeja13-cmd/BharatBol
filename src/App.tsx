@@ -7,7 +7,6 @@ import { StandsProvider } from './state/StandsProvider';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { BottomNav } from './components/BottomNav';
-import { PwaNudge } from './components/PwaNudge';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ProfileGateModal } from './components/ProfileGateModal';
 import { ShareSheet } from './components/ShareSheet';
@@ -96,7 +95,6 @@ function Shell() {
         </ErrorBoundary>
       </main>
       {!immersive && <Footer />}
-      {!immersive && <PwaNudge />}
       {!immersive && <BottomNav />}
     </div>
   );

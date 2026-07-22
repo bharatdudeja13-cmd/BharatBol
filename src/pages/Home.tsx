@@ -4,6 +4,7 @@ import { useStands } from '../state/StandsProvider';
 import { useI18n } from '../lib/i18n';
 import { LiveNumber } from '../components/LiveNumber';
 import { StandCard } from '../components/StandCard';
+import { StandMarquee } from '../components/StandMarquee';
 import { SupporterWall } from '../components/SupporterWall';
 import { Tilegram } from '../components/Tilegram';
 import { AshokaChakra } from '../components/AshokaChakra';
@@ -12,6 +13,7 @@ import { EvidenceStrip } from '../components/EvidenceStrip';
 import { useEvidence, evidenceWatchPath } from '../state/useEvidence';
 import { fmt } from '../lib/format';
 import { stateName } from '../lib/states';
+import { PwaInstallButton } from '../components/PwaInstallButton';
 
 export default function Home() {
   const { stands, counts, national, wall, breakdown, standStates, standOfTheDayId, loading } =
@@ -87,6 +89,7 @@ export default function Home() {
           <Link to="/evidence" className="btn-secondary text-base min-h-12">
             {t('evidence.title')}
           </Link>
+          <PwaInstallButton className="btn-ghost text-base min-h-12" />
         </div>
         <p className="mt-4 text-xs text-sub font-mono">{t('counts.verified')}</p>
       </section>
@@ -175,15 +178,7 @@ export default function Home() {
         )}
       </section>
 
-      {!loading && stands.length > 0 && (
-        <section className="marquee overflow-hidden -mx-4 px-4 py-2 mt-12" aria-label={t('nav.stands')}>
-          <div className="marquee-track flex gap-4 w-max">
-            {[...stands, ...stands].map((s, i) => (
-              <StandCard key={`${s.id}-${i}`} stand={s} compact />
-            ))}
-          </div>
-        </section>
-      )}
+      {!loading && stands.length > 0 && <StandMarquee stands={stands} />}
 
       <section className="mt-12 mb-4">
         <h2 className="font-display font-semibold text-2xl">{t('wall.title')}</h2>

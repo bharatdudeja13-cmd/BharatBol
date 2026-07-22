@@ -12,8 +12,10 @@ import { useI18n } from '../lib/i18n';
 import { issueLabel, isIssueSlug } from '../config/issues';
 import { stateName } from '../lib/states';
 import { PLATFORM_LABEL } from '../lib/feedUrl';
-import type { FeedItem } from '../lib/types';
+import type { FeedItem, Stand } from '../lib/types';
 import { isLive, supabase } from '../lib/supabase';
+import { fmt } from '../lib/format';
+import { evidencePoster } from '../lib/evidenceMedia';
 
 function ytId(url: string): string | null {
   try {
@@ -28,22 +30,17 @@ function igId(url: string): string | null {
   return m?.[1] ?? null;
 }
 
-function poster(item: FeedItem): string | null {
-  if (item.thumbnail_url) return item.thumbnail_url;
-  const y = item.platform === 'youtube' ? ytId(item.url) : null;
-  return y ? `https://i.ytimg.com/vi/${y}/hqdefault.jpg` : null;
-}
-
-/** Full-viewport shorts player. Poster stays until embed loads; one active iframe. */
+/** Full-viewport shorts player. Iframes are pointer-events-none so vertical scroll works. */
 export default function EvidencePlayer() {
   const [params] = useSearchParams();
   const issue = isIssueSlug(params.get('issue') ?? '') ? params.get('issue') : null;
   const state = params.get('state');
   const startId = params.get('id');
+  const standParam = params.get('stand');
 
   const { t, lang } = useI18n();
   const { session, signIn } = useAuth();
-  const { stands } = useStands();
+  const { stands, counts: standCounts } = useStands();
 
   const [items, setItems] = useState<FeedItem[]>([]);
   const [counts, setCounts] = useState<Record<string, ReactionCounts>>({});
@@ -52,29 +49,40 @@ export default function EvidencePlayer() {
   const [loading, setLoading] = useState(true);
   const [muted, setMuted] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
-  /** Embed ready per item id — poster stays until true. */
   const [ready, setReady] = useState<Record<string, boolean>>({});
+  const [browsing, setBrowsing] = useState(!startId);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLElement | null)[]>([]);
   const ytIframeRef = useRef<HTMLIFrameElement | null>(null);
+
+  const standForIssue = useCallback(
+    (slug: string) => stands.find((s) => s.category === slug) ?? null,
+    [stands]
+  );
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
       setReady({});
-      const list = await loadEvidence({ issue, state, limit: 40 });
+      const list = await loadEvidence({ issue, state, limit: 60 });
       if (cancelled) return;
-      setItems(list);
-      setCounts(await loadReactionCounts(list.map((i) => i.id)));
-      const idx = startId ? Math.max(0, list.findIndex((i) => i.id === startId)) : 0;
+      let next = list;
+      if (standParam) {
+        const st = stands.find((s) => s.id === standParam);
+        if (st) next = list.filter((i) => i.issue === st.category);
+      }
+      setItems(next);
+      setCounts(await loadReactionCounts(next.map((i) => i.id)));
+      const idx = startId ? Math.max(0, next.findIndex((i) => i.id === startId)) : 0;
       setActive(idx < 0 ? 0 : idx);
+      setBrowsing(!startId && !standParam);
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [issue, state, startId]);
+  }, [issue, state, startId, standParam, stands]);
 
   useEffect(() => {
     if (!supabase || !session || items.length === 0) {
@@ -104,12 +112,13 @@ export default function EvidencePlayer() {
   }, [session, items]);
 
   useEffect(() => {
-    if (loading || items.length === 0) return;
+    if (loading || browsing || items.length === 0) return;
     slideRefs.current[active]?.scrollIntoView({ block: 'start' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading]);
+  }, [loading, browsing]);
 
   useEffect(() => {
+    if (browsing) return;
     const root = scrollerRef.current;
     if (!root) return;
     const obs = new IntersectionObserver(
@@ -122,15 +131,14 @@ export default function EvidencePlayer() {
             best = { idx, ratio: e.intersectionRatio };
           }
         }
-        if (best && best.ratio >= 0.6) setActive(best.idx);
+        if (best && best.ratio >= 0.55) setActive(best.idx);
       },
-      { root, threshold: [0.55, 0.7, 0.85] }
+      { root, threshold: [0.4, 0.55, 0.7, 0.85] }
     );
     for (const el of slideRefs.current) if (el) obs.observe(el);
     return () => obs.disconnect();
-  }, [items.length]);
+  }, [items.length, browsing]);
 
-  // Mute/unmute YouTube without remounting (avoids black flash).
   useEffect(() => {
     const frame = ytIframeRef.current;
     if (!frame?.contentWindow) return;
@@ -145,11 +153,23 @@ export default function EvidencePlayer() {
     }
   }, [muted, active]);
 
+  const groups = useMemo(() => {
+    const map = new Map<string, { stand: Stand | null; issue: string; items: FeedItem[] }>();
+    for (const item of items) {
+      const stand = standForIssue(item.issue);
+      const key = stand?.id ?? item.issue;
+      const cur = map.get(key);
+      if (cur) cur.items.push(item);
+      else map.set(key, { stand, issue: item.issue, items: [item] });
+    }
+    return [...map.values()];
+  }, [items, standForIssue]);
+
   const relatedStand = useMemo(() => {
     const item = items[active];
     if (!item) return null;
-    return stands.find((s) => s.category === item.issue) ?? null;
-  }, [stands, items, active]);
+    return standForIssue(item.issue);
+  }, [items, active, standForIssue]);
 
   const react = useCallback(
     async (item: FeedItem, value: 'up' | 'down') => {
@@ -193,6 +213,11 @@ export default function EvidencePlayer() {
     setItems((prev) => prev.filter((x) => x.id !== item.id));
   };
 
+  const openAt = (idx: number) => {
+    setActive(idx);
+    setBrowsing(false);
+  };
+
   if (loading) {
     return (
       <div className="fixed inset-0 z-40 bg-navyDeep text-white flex items-center justify-center">
@@ -213,25 +238,101 @@ export default function EvidencePlayer() {
     );
   }
 
+  if (browsing) {
+    return (
+      <div className="min-h-screen bg-bg pb-24">
+        <header className="sticky top-0 z-30 bg-bg/95 backdrop-blur border-b border-line px-4 py-3 flex items-center gap-3">
+          <Link to="/feed" className="text-sm font-semibold text-navy">
+            ← {t('misc.back')}
+          </Link>
+          <h1 className="font-display font-bold text-lg text-navy flex-1">{t('evidence.title')}</h1>
+        </header>
+        <div className="mx-auto max-w-2xl px-4 pt-6 space-y-8">
+          <p className="text-sm text-sub">{t('evidence.browseSub')}</p>
+          {groups.map((g) => {
+            const title = g.stand
+              ? lang === 'hi' && g.stand.title_hi
+                ? g.stand.title_hi
+                : g.stand.title
+              : issueLabel(g.issue, lang);
+            const standing = g.stand ? standCounts[g.stand.id]?.total ?? 0 : 0;
+            return (
+              <section key={g.stand?.id ?? g.issue} className="space-y-3">
+                <div className="flex items-end justify-between gap-3">
+                  <div>
+                    <h2 className="font-display font-semibold text-xl text-navy">{title}</h2>
+                    <p className="text-xs text-sub mt-0.5">
+                      {fmt(g.items.length)} {t('evidence.clipCount')}
+                      {g.stand ? ` · ${fmt(standing)} ${t('counts.standing')}` : ''}
+                    </p>
+                  </div>
+                  {g.stand && (
+                    <Link to={`/stand/${g.stand.id}`} className="text-sm text-navy underline underline-offset-4 shrink-0">
+                      {t('stand.standWith')}
+                    </Link>
+                  )}
+                </div>
+                <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+                  {g.items.map((item) => {
+                    const idx = items.findIndex((x) => x.id === item.id);
+                    const img = evidencePoster(item);
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => openAt(idx)}
+                        className="snap-start shrink-0 w-36 rounded-2xl overflow-hidden border border-line bg-faint text-left"
+                      >
+                        <div className="relative aspect-[9/16] bg-navyDeep">
+                          {img ? (
+                            <img src={img} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                          ) : (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-3 text-center text-white/80">
+                              <span className="text-xs font-mono">{PLATFORM_LABEL[item.platform]}</span>
+                              <span className="text-[11px] line-clamp-3">{item.title || issueLabel(item.issue, lang)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-40 bg-black text-white">
-      <header className="absolute top-0 inset-x-0 z-50 flex items-center justify-between gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 bg-gradient-to-b from-black/70 to-transparent">
-        <Link to={issue ? `/feed?issue=${issue}` : state ? '/' : '/feed'} className="text-sm font-semibold">
+      <header className="absolute top-0 inset-x-0 z-50 flex items-center justify-between gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 bg-gradient-to-b from-black/70 to-transparent pointer-events-none">
+        <button
+          type="button"
+          className="text-sm font-semibold pointer-events-auto"
+          onClick={() => setBrowsing(true)}
+        >
           ← {t('misc.back')}
-        </Link>
-        <p className="text-xs font-mono truncate">
-          {issue ? issueLabel(issue, lang) : t('evidence.title')}
-          {state ? ` · ${stateName(state, lang)}` : ''}
+        </button>
+        <p className="text-xs font-mono truncate pointer-events-none">
+          {relatedStand
+            ? lang === 'hi' && relatedStand.title_hi
+              ? relatedStand.title_hi
+              : relatedStand.title
+            : issue
+              ? issueLabel(issue, lang)
+              : t('evidence.title')}
         </p>
-        <button type="button" className="text-sm min-h-11 px-2" onClick={() => setMuted((m) => !m)}>
+        <button type="button" className="text-sm min-h-11 px-2 pointer-events-auto" onClick={() => setMuted((m) => !m)}>
           {muted ? t('evidence.unmute') : t('evidence.mute')}
         </button>
       </header>
 
       <div
         ref={scrollerRef}
-        className="h-full overflow-y-scroll snap-y snap-mandatory overscroll-y-contain"
-        style={{ scrollSnapType: 'y mandatory' }}
+        className="h-full overflow-y-auto overscroll-y-contain touch-pan-y"
+        style={{ scrollSnapType: 'y mandatory', WebkitOverflowScrolling: 'touch' }}
       >
         {items.map((item, idx) => {
           const isActive = idx === active;
@@ -240,9 +341,8 @@ export default function EvidencePlayer() {
           const my = mine[item.id];
           const yid = item.platform === 'youtube' ? ytId(item.url) : null;
           const iid = item.platform === 'instagram' ? igId(item.url) : null;
-          const img = poster(item);
+          const img = evidencePoster(item);
           const embedReady = !!ready[item.id];
-          const showPoster = !isActive || !embedReady || !(yid || iid);
 
           return (
             <section
@@ -253,89 +353,68 @@ export default function EvidencePlayer() {
               data-idx={idx}
               className="relative h-[100dvh] w-full snap-start snap-always flex items-center justify-center bg-black"
             >
-              {showPoster &&
-                (img ? (
-                  <img
-                    src={img}
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-cover opacity-90"
-                    loading={near ? 'eager' : 'lazy'}
-                    decoding="async"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-navyDeep px-6 text-center">
-                    <p className="text-sm font-mono text-white/70">{PLATFORM_LABEL[item.platform]}</p>
-                    <p className="text-base font-semibold line-clamp-4">{item.title ?? item.url}</p>
-                  </div>
-                ))}
+              {/* Poster always under; never black while loading */}
+              {img ? (
+                <img
+                  src={img}
+                  alt=""
+                  className={`absolute inset-0 w-full h-full object-cover transition-opacity ${
+                    isActive && embedReady && (yid || iid) ? 'opacity-0' : 'opacity-90'
+                  }`}
+                  loading={near ? 'eager' : 'lazy'}
+                />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-navyDeep to-black px-6 text-center">
+                  <p className="text-sm font-mono text-white/70">{PLATFORM_LABEL[item.platform]}</p>
+                  <p className="text-base font-semibold line-clamp-4">
+                    {item.title || issueLabel(item.issue, lang)}
+                  </p>
+                  {item.state && <p className="text-xs text-white/50">{stateName(item.state, lang)}</p>}
+                </div>
+              )}
 
+              {/* pointer-events-none so vertical swipe reaches the scroller */}
               {isActive && yid && (
                 <iframe
                   ref={ytIframeRef}
-                  className={`absolute inset-0 w-full h-full transition-opacity duration-300 ${
+                  className={`absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-200 ${
                     embedReady ? 'opacity-100' : 'opacity-0'
                   }`}
-                  src={`https://www.youtube-nocookie.com/embed/${yid}?autoplay=1&rel=0&playsinline=1&modestbranding=1&mute=1&enablejsapi=1`}
+                  src={`https://www.youtube-nocookie.com/embed/${yid}?autoplay=1&rel=0&playsinline=1&modestbranding=1&mute=1&enablejsapi=1&controls=0`}
                   title={item.title ?? 'YouTube'}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture"
-                  allowFullScreen
-                  onLoad={() => {
-                    setReady((r) => ({ ...r, [item.id]: true }));
-                    if (!muted && ytIframeRef.current?.contentWindow) {
-                      try {
-                        ytIframeRef.current.contentWindow.postMessage(
-                          JSON.stringify({ event: 'command', func: 'unMute', args: [] }),
-                          '*'
-                        );
-                      } catch {
-                        /* ignore */
-                      }
-                    }
-                  }}
+                  onLoad={() => setReady((r) => ({ ...r, [item.id]: true }))}
                 />
               )}
 
               {isActive && iid && (
                 <iframe
-                  className={`absolute inset-0 w-full h-full bg-black transition-opacity duration-300 ${
+                  className={`absolute inset-0 w-full h-full bg-transparent pointer-events-none transition-opacity duration-200 ${
                     embedReady ? 'opacity-100' : 'opacity-0'
                   }`}
                   src={`https://www.instagram.com/reel/${iid}/embed/captioned/`}
                   title={item.title ?? 'Instagram'}
-                  allow="autoplay; encrypted-media; picture-in-picture"
-                  loading="eager"
                   onLoad={() => setReady((r) => ({ ...r, [item.id]: true }))}
                 />
               )}
 
               {isActive && item.platform === 'x' && (
-                <div className="relative z-10 max-w-md mx-auto px-6 text-center space-y-4">
-                  <p className="text-sm font-mono text-white/70">{PLATFORM_LABEL.x}</p>
+                <div className="relative z-10 max-w-md mx-auto px-6 text-center space-y-4 pointer-events-auto">
                   <p className="text-lg leading-snug">{item.title}</p>
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="inline-flex btn-secondary text-sm"
-                  >
+                  <a href={item.url} target="_blank" rel="noreferrer noopener" className="inline-flex btn-secondary text-sm">
                     {t('evidence.openOriginal')}
                   </a>
                 </div>
               )}
 
-              <div className="absolute inset-x-0 bottom-0 z-20 p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-black/85 via-black/45 to-transparent space-y-3">
+              <div className="absolute inset-x-0 bottom-0 z-20 p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-black/90 via-black/50 to-transparent space-y-3 pointer-events-auto">
                 <p className="text-[11px] font-mono uppercase tracking-wide text-saffron">
                   {t('feed.unverified')} · {PLATFORM_LABEL[item.platform]}
-                  {(item.scope ?? (item.state ? 'state' : 'national')) === 'national'
-                    ? ` · ${t('add.allIndia')}`
-                    : item.state
-                      ? ` · ${stateName(item.state, lang)}`
-                      : ''}
+                  {item.state ? ` · ${stateName(item.state, lang)}` : ` · ${t('add.allIndia')}`}
                 </p>
-                <p className="text-sm font-semibold line-clamp-2">{item.title ?? item.url}</p>
-                <p className="text-xs text-white/70">{issueLabel(item.issue, lang)}</p>
-                <p className="text-[11px] text-white/60">{t('evidence.reactHonest')}</p>
-
+                <p className="text-sm font-semibold line-clamp-2">
+                  {item.title || issueLabel(item.issue, lang)}
+                </p>
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
@@ -357,6 +436,14 @@ export default function EvidencePlayer() {
                   >
                     {t('evidence.notUseful')} · {c.downs}
                   </button>
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="min-h-11 rounded-full px-4 py-2 text-sm border border-white/30 text-white/80 inline-flex items-center"
+                  >
+                    {t('evidence.openOriginal')}
+                  </a>
                   <button
                     type="button"
                     onClick={() => void report(item)}
@@ -365,15 +452,16 @@ export default function EvidencePlayer() {
                     {t('feed.report')}
                   </button>
                 </div>
-
                 {relatedStand && (
                   <Link
                     to={`/stand/${relatedStand.id}`}
                     className="flex items-center justify-center min-h-12 w-full rounded-2xl px-4 py-3 text-base font-bold bg-saffron text-navy shadow-lift"
                   >
-                    {t('evidence.nowStand')} — {lang === 'hi' && relatedStand.title_hi ? relatedStand.title_hi : relatedStand.title}
+                    {t('evidence.nowStand')}:{' '}
+                    {lang === 'hi' && relatedStand.title_hi ? relatedStand.title_hi : relatedStand.title}
                   </Link>
                 )}
+                <p className="text-center text-[10px] text-white/40">{t('evidence.swipeHint')}</p>
               </div>
             </section>
           );

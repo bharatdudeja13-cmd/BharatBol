@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { evidencePoster } from '../lib/evidenceMedia';
 import type { FeedItem } from '../lib/types';
 import { useI18n } from '../lib/i18n';
 import { issueLabel } from '../config/issues';
@@ -6,26 +7,12 @@ import { stateName } from '../lib/states';
 import { evidenceWatchPath } from '../state/useEvidence';
 import { PLATFORM_LABEL } from '../lib/feedUrl';
 
-function thumb(item: FeedItem): string | null {
-  if (item.thumbnail_url) return item.thumbnail_url;
-  if (item.platform === 'youtube') {
-    try {
-      const v = new URL(item.url).searchParams.get('v');
-      if (v) return `https://i.ytimg.com/vi/${v}/hqdefault.jpg`;
-    } catch {
-      /* ignore */
-    }
-  }
-  return null;
-}
-
 function scopeOf(item: FeedItem): 'state' | 'national' {
   return item.scope ?? (item.state ? 'state' : 'national');
 }
 
 /**
- * Horizontal evidence strip for an issue (and optional state).
- * Tap opens the shorts-style player filtered to the same set.
+ * Horizontal evidence strip. Always shows a readable card even without a thumbnail.
  */
 export function EvidenceStrip({
   items,
@@ -45,11 +32,7 @@ export function EvidenceStrip({
   if (loading) {
     return (
       <section className="space-y-3">
-        <div className="flex items-end justify-between gap-3">
-          <h2 className="font-display font-semibold text-xl text-navy">
-            {title ?? t('evidence.title')}
-          </h2>
-        </div>
+        <h2 className="font-display font-semibold text-xl text-navy">{title ?? t('evidence.title')}</h2>
         <div className="flex gap-3 overflow-hidden">
           {[0, 1, 2].map((i) => (
             <div
@@ -96,23 +79,31 @@ export function EvidenceStrip({
       </div>
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory">
         {items.map((item) => {
-          const src = thumb(item);
+          const src = evidencePoster(item);
           const national = scopeOf(item) === 'national';
+          const label = item.title || issueLabel(item.issue, lang);
           return (
             <Link
               key={item.id}
-              to={evidenceWatchPath({ issue: issue ?? item.issue, state: state ?? item.state, id: item.id })}
+              to={evidenceWatchPath({
+                issue: issue ?? item.issue,
+                state: state ?? item.state,
+                id: item.id,
+              })}
               className="snap-start shrink-0 w-36 sm:w-40 rounded-2xl overflow-hidden border border-line bg-faint"
             >
-              <div className="relative aspect-[9/16] bg-navyDeep">
+              <div className="relative aspect-[9/16] bg-gradient-to-b from-navyDeep to-[#0a1628]">
                 {src ? (
                   <img src={src} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
                 ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-white/70 text-xs px-2 text-center">
-                    {PLATFORM_LABEL[item.platform]}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-3 text-center text-white/85">
+                    <span className="text-[10px] font-mono uppercase tracking-wider">
+                      {PLATFORM_LABEL[item.platform]}
+                    </span>
+                    <span className="text-xs font-semibold line-clamp-4 leading-snug">{label}</span>
                   </div>
                 )}
-                <span className="absolute bottom-2 left-2 right-2 text-[10px] font-mono text-white/90 drop-shadow">
+                <span className="absolute bottom-2 left-2 right-2 text-[10px] font-mono text-white drop-shadow-md">
                   {issueLabel(item.issue, lang)}
                   {national
                     ? ` · ${t('add.allIndia')}`
@@ -121,7 +112,7 @@ export function EvidenceStrip({
                       : ''}
                 </span>
               </div>
-              <p className="p-2 text-xs line-clamp-2 text-ink">{item.title ?? item.url}</p>
+              <p className="p-2 text-xs line-clamp-2 text-ink">{label}</p>
             </Link>
           );
         })}
