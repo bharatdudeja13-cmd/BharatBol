@@ -35,13 +35,28 @@ guardrails live in the [README](../README.md); the privacy design is in
 cp .env.example .env   # fill VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_SITE_URL, VITE_REPO_URL
 ```
 
-## 3. Cloudflare Pages
+## 3. Cloudflare Workers (static assets)
 
-- Create a Pages project from this repo. Build command `npm run build`, output directory `dist`,
-  and add the four `VITE_*` environment variables.
-- Or deploy directly: `npx wrangler pages deploy dist`.
-- `public/_redirects` already routes all paths to the SPA. Cloudflare’s CDN absorbs read traffic;
-  only writes and realtime touch Supabase — which is what keeps millions of viewers free.
+Deployment is pinned by [`wrangler.jsonc`](../wrangler.jsonc) — that file's presence is
+deliberate: it stops Workers Builds from auto-configuring the project through the
+Cloudflare Vite plugin (which would require Vite ≥ 6 and rewrite our build pipeline).
+
+- **From the dashboard:** Workers & Pages → connect this repo. Build command `npm run build`,
+  and add the four `VITE_*` variables as **build-time** environment variables (they are inlined
+  into the client bundle by Vite).
+- **From your machine:** `npx wrangler login && npx wrangler deploy`.
+- Validate config without deploying: `npx wrangler deploy --dry-run`.
+- Test the built site plus the Worker locally: `npm run build && npx wrangler dev`.
+
+Routing: only `/stand/*` invokes the Worker (`run_worker_first`), which rewrites Open Graph
+tags per stand for link previews; every other path is served straight from Cloudflare's CDN,
+with `not_found_handling: single-page-application` resolving client-side routes. Reads are
+absorbed by the CDN — only writes and realtime touch Supabase, which is what keeps millions
+of viewers free.
+
+The Worker's runtime `vars` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`) live in `wrangler.jsonc`.
+Both are public by design and already inlined in the client bundle; never add the
+service-role key or the registrar private key there.
 
 ## 4. Merkle checkpoints (tamper-evidence)
 

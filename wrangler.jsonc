@@ -1,0 +1,33 @@
+{
+  // Cloudflare Workers (static assets) deployment for BharatBol.
+  //
+  // The presence of this file is deliberate: it stops Workers Builds from
+  // trying to auto-configure the project through the Cloudflare Vite plugin
+  // (which requires Vite >= 6). We pin the configuration ourselves instead.
+  //
+  // Build command: npm run build   →   output: dist/
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bharatbol",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-07-22",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // Client-side routes (/stands, /verify, /me …) resolve to index.html.
+    "not_found_handling": "single-page-application",
+    // Only per-stand URLs reach the Worker — everything else is served
+    // straight from the CDN, which is what keeps reads free at scale.
+    "run_worker_first": ["/stand/*"]
+  },
+  "vars": {
+    // Public by design: both values are already inlined into the client
+    // bundle at build time. The Worker needs them at runtime to look up a
+    // stand's title for link previews. Never put the service-role key or
+    // the registrar private key here.
+    "SUPABASE_URL": "https://byfwdrazysblopnlahmx.supabase.co",
+    "SUPABASE_ANON_KEY": "sb_publishable_xuD7s40joB_fQ1vByro75w_64nil_DL"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
