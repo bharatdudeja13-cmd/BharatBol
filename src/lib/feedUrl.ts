@@ -20,9 +20,32 @@ export type ParsedUrl = {
 };
 
 const TRACKING = [
-  'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
-  'si', 'feature', 'igsh', 'igshid', 'ref_src', 'ref_url', 's', 't', 'fbclid', 'gclid',
+  // UTM + ad click ids
+  'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'utm_id',
+  'fbclid', 'gclid', 'mc_eid', 'mc_cid',
+  // YouTube / Google share crumbs
+  'si', 'feature', 'pp', 'bp',
+  // X / Twitter share crumbs
+  'ref_src', 'ref_url', 's', 't',
+  // Instagram / Meta personal share tags (these can fingerprint the sharer)
+  'igsh', 'igshid', 'ig_rid', 'img_index', 'mibextid',
 ];
+
+/**
+ * True when the pasted string carried personal/share tracking that the
+ * canonical form drops. Used to tell the submitter we scrubbed it.
+ */
+export function strippedShareDetails(raw: string, canon: string): boolean {
+  const trimmed = raw.trim();
+  if (!trimmed) return false;
+  try {
+    const u = new URL(trimmed.includes('://') ? trimmed : `https://${trimmed}`);
+    if ([...u.searchParams.keys()].some((k) => TRACKING.includes(k.toLowerCase()))) return true;
+  } catch {
+    /* fall through */
+  }
+  return trimmed.replace(/\/$/, '') !== canon.replace(/\/$/, '');
+}
 
 /** Returns null for anything that is not a supported public post URL. */
 export function parseSocialUrl(raw: string): ParsedUrl | null {

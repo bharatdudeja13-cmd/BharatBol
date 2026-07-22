@@ -22,8 +22,8 @@ const REASONS = [
  *
  * Today every approved item is pulled on the first report. When abuse at
  * scale appears, replace this body with something like:
- *   return item.reports + 1 >= REPORT_HIDE_THRESHOLD
- *     || reporterIsTrusted(/* future signal */);
+ *   return (item.reports + 1) >= REPORT_HIDE_THRESHOLD
+ *     || reporterIsTrusted(futureSignal);
  * so one bad-faith click cannot hide content. Keep the pull-to-`re_review`
  * path and the mod-queue priority; only the *when* changes.
  */
