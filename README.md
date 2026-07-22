@@ -23,8 +23,11 @@ party, or election authority. Counts reflect public sentiment and **are not an e
 - **Shareable proof card & citizen card** — rendered client-side on `<canvas>`, shared via the
   Web Share API or downloaded as PNG.
 - **EN / हिंदी** scaffold, PWA install, reduced-motion support, visible focus states.
+- **Issue feed** — citizens submit public posts (Web Share Target when installed, paste
+  anywhere incl. iOS); a human moderates before anything is visible; the feed browses by issue
+  and state and routes back to the matching Stand. Link + embed only, never re-hosted.
 - **Demo mode** — with no Supabase env configured, the app runs on local sample data so anyone
-  can audit the UI.
+  can audit the UI (localhost only; a deployed build with missing config fails visibly).
 
 ## Stack
 
@@ -43,6 +46,7 @@ The whole product rests on a few small pieces. If you audit anything, audit thes
 | [`tests/unlinkability.test.ts`](tests/unlinkability.test.ts) | **The acceptance gate**: automated assertions that no query path yields account↔ballot, the registrar ledger is sealed, erasure cascades, and a simulated curious registrar fails to link receipts to accounts. Run with `npm test`. |
 | [`src/lib/blind.ts`](src/lib/blind.ts) + [`src/state/StandsProvider.tsx`](src/state/StandsProvider.tsx) | Client protocol: blind → issue → finalize → cast **without a user JWT**. Receipts (the only proof of your own ballots) live in the browser, exportable/importable from the profile page. |
 | [`src/lib/cards.ts`](src/lib/cards.ts) | Share cards are drawn entirely client-side; nothing is uploaded. |
+| [`docs/content-feed-design.md`](docs/content-feed-design.md) + [`supabase/phase4_feed.sql`](supabase/phase4_feed.sql) | The feed's privacy shape, stated plainly: `feed_items` has no submitter column, the account↔submission ledger is sealed (anti-abuse/takedown only), only human-approved items are publicly readable, and no media is ever re-hosted. Enforced by `tests/feed-privacy.test.ts`. Ballot unlinkability is untouched. |
 | [`supabase/phase2b_public_log.sql`](supabase/phase2b_public_log.sql) + [`checkpoints/`](checkpoints/) | Tamper-evidence: every cast/withdrawal is mirrored into an append-only, anonymous public log; scheduled Merkle roots over it are committed to this repo. `scripts/recount.mjs` lets anyone reproduce every displayed number from the public log; `scripts/prove-inclusion.mjs` lets a citizen prove their own anonymous ballot is counted. Tamper-evident, not tamper-proof — and we say so. |
 
 **Honest limits** (also on the About page): the database stores no account↔stand link — that is

@@ -16,6 +16,10 @@ import Me from './pages/Me';
 import About from './pages/About';
 import DataRights from './pages/DataRights';
 import Verify from './pages/Verify';
+import Feed from './pages/Feed';
+import AddToFeed from './pages/AddToFeed';
+import Moderation from './pages/Moderation';
+import Admin from './pages/Admin';
 import { configError } from './lib/supabase';
 
 /** Deployed with no backend config: a clear failure, never silent demo data. */
@@ -92,6 +96,10 @@ export default function App() {
                 <Route path="/about" element={<About />} />
                 <Route path="/data-rights" element={<DataRights />} />
                 <Route path="/verify" element={<Verify />} />
+                <Route path="/feed" element={<Feed />} />
+                <Route path="/add" element={<AddToFeed />} />
+                <Route path="/moderation" element={<Moderation />} />
+                <Route path="/admin" element={<Admin />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
               </ErrorBoundary>

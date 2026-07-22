@@ -35,6 +35,9 @@ export function Header() {
           <NavLink to="/stands" className={navCls}>
             {t('nav.stands')}
           </NavLink>
+          <NavLink to="/feed" className={navCls}>
+            {t('nav.feed')}
+          </NavLink>
           <NavLink to="/about" className={navCls}>
             {t('nav.about')}
           </NavLink>

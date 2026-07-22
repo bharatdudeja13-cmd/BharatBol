@@ -9,7 +9,9 @@ guardrails live in the [README](../README.md); the privacy design is in
 1. Create a free project at [supabase.com](https://supabase.com).
 2. Open the **SQL editor** and run [`supabase/schema.sql`](../supabase/schema.sql), then
    [`supabase/phase2_privacy.sql`](../supabase/phase2_privacy.sql), then
-   [`supabase/phase2b_public_log.sql`](../supabase/phase2b_public_log.sql), once each, in that order.
+   [`supabase/phase2b_public_log.sql`](../supabase/phase2b_public_log.sql),
+   [`supabase/phase3_polls.sql`](../supabase/phase3_polls.sql) and
+   [`supabase/phase4_feed.sql`](../supabase/phase4_feed.sql), once each, in that order.
 3. Generate the registrar key pair and deploy the Edge Functions:
    ```bash
    node scripts/generate-registrar-key.mjs   # prints public + private JWK
@@ -18,7 +20,20 @@ guardrails live in the [README](../README.md); the privacy design is in
                         REGISTRAR_PUBLIC_JWK='<public jwk json>'
    supabase functions deploy registrar-issue
    supabase functions deploy ballot-cast ballot-withdraw --no-verify-jwt
+   supabase functions deploy feed-submit feed-moderate
+   supabase functions deploy feed-report --no-verify-jwt
    ```
+   `feed-report` is intentionally unauthenticated: original creators and affected
+   people may have no account, and a takedown route that requires a login is not a
+   real takedown route. `feed-submit` and `feed-moderate` both require a user JWT.
+
+   Moderators are rows in the sealed `admins` table — add yourself once:
+   ```sql
+   insert into public.admins (user_id) values ('<your auth.users id>');
+   ```
+   Optional: `supabase secrets set INSTAGRAM_OEMBED_TOKEN='<facebook app token>'`
+   to fetch Instagram thumbnails. Without it, Instagram items stay titled
+   link-cards — BharatBol never scrapes.
    `--no-verify-jwt` on the ballot functions is deliberate, not a shortcut: they are
    anonymous by design (the registrar's blind signature is the only admission control),
    and the gateway's JWT check would also reject the new non-JWT `sb_publishable_...`

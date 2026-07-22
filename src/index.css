@@ -35,6 +35,97 @@
   }
 }
 
+/* ---- National flag (home hero) ----------------------------------------
+   Band order and 1:1:1 proportion are guaranteed by the geometry in
+   src/components/NationalFlag.tsx (congruent sine edges). Nothing here
+   scales or skews the cloth: the only animation is a horizontal
+   translate, so the wave travels without ever distorting the bands. */
+.bb-flag {
+  position: relative;
+  width: 100%;
+  max-width: 260px;
+  aspect-ratio: 300 / 194;       /* fixed box: no layout shift */
+  margin-inline: auto;
+}
+
+.bb-flag-svg {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 3px;
+  filter: drop-shadow(0 10px 18px rgba(21, 48, 94, 0.16));
+}
+
+.bb-flag-cloth {
+  will-change: transform;
+  animation: bb-flag-travel 7s linear infinite;
+}
+
+/* One full period, so the loop is seamless. */
+@keyframes bb-flag-travel {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-300px);
+  }
+}
+
+/* The chakra bobs with the white band passing beneath it. */
+.bb-flag-chakra {
+  animation: bb-flag-bob 7s ease-in-out infinite;
+}
+
+@keyframes bb-flag-bob {
+  0%,
+  100% {
+    transform: translate(150px, 97px);
+  }
+  25% {
+    transform: translate(150px, 90px);
+  }
+  75% {
+    transform: translate(150px, 104px);
+  }
+}
+
+/* Slow, continuous, dignified: 24s = one spoke per second. */
+.bb-flag-chakra-spin {
+  animation: bb-chakra-turn 24s linear infinite;
+  transform-origin: 0 0;
+}
+
+@keyframes bb-chakra-turn {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Still tricolour is hidden unless motion is reduced. */
+.bb-flag-still {
+  display: none;
+}
+
+/* Opted out of motion: a flat, correct, completely still flag. */
+@media (prefers-reduced-motion: reduce) {
+  .bb-flag-cloth {
+    display: none;
+  }
+  .bb-flag-still {
+    display: block;
+  }
+  .bb-flag-chakra,
+  .bb-flag-chakra-spin {
+    animation: none;
+  }
+  .bb-flag-chakra {
+    transform: translate(150px, 97px);
+  }
+}
+
 /* Rotating stand strip on the Home page */
 @keyframes bb-marquee {
   from { transform: translateX(0); }

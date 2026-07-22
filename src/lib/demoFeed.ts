@@ -1,0 +1,62 @@
+// Sample feed items for local demo mode (no Supabase configured).
+// Deliberately mundane, issue-framed civic clips — no real-world claims
+// are made about these placeholder URLs beyond the neutral titles here.
+import type { FeedItem } from './types';
+
+const day = (n: number) =>
+  new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+
+export const DEMO_FEED: FeedItem[] = [
+  {
+    id: 'f0000000-0000-4000-8000-000000000001',
+    url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',
+    platform: 'youtube',
+    title: 'Students queue outside an examination centre — local news report',
+    author_name: 'Sample News',
+    thumbnail_url: null,
+    issue: 'education',
+    state: 'MH',
+    status: 'approved',
+    submitted_on: day(0),
+    approved_at: new Date().toISOString(),
+  },
+  {
+    id: 'f0000000-0000-4000-8000-000000000002',
+    url: 'https://x.com/example/status/1700000000000000000',
+    platform: 'x',
+    title: 'Thread: what the published audit report actually says about the exam process',
+    author_name: '@example',
+    thumbnail_url: null,
+    issue: 'transparency',
+    state: 'DL',
+    status: 'approved',
+    submitted_on: day(1),
+    approved_at: new Date(Date.now() - 86_400_000).toISOString(),
+  },
+  {
+    id: 'f0000000-0000-4000-8000-000000000003',
+    url: 'https://www.instagram.com/reel/CxxxxxxxxxA/',
+    platform: 'instagram',
+    title: 'Village school with three vacant teaching posts — a parent explains',
+    author_name: 'sample.creator',
+    thumbnail_url: null,
+    issue: 'education',
+    state: 'BR',
+    status: 'approved',
+    submitted_on: day(2),
+    approved_at: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+  },
+  {
+    id: 'f0000000-0000-4000-8000-000000000004',
+    url: 'https://www.youtube.com/watch?v=jNQXAC9IVRw',
+    platform: 'youtube',
+    title: 'Job fair queue stretches down the street — citizen recording',
+    author_name: 'Sample Citizen',
+    thumbnail_url: null,
+    issue: 'employment',
+    state: 'UP',
+    status: 'approved',
+    submitted_on: day(3),
+    approved_at: new Date(Date.now() - 3 * 86_400_000).toISOString(),
+  },
+];
