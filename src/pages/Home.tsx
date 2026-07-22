@@ -63,29 +63,19 @@ export default function Home() {
         <p className="mt-5 text-xs text-sub font-mono">{t('counts.verified')}</p>
       </section>
 
-      {/* Rotating strip of live stands */}
-      {!loading && stands.length > 0 && (
-        <section className="marquee overflow-hidden -mx-4 px-4 py-2" aria-label={t('nav.stands')}>
-          <div className="marquee-track flex gap-4 w-max">
-            {[...stands, ...stands].map((s, i) => (
-              <StandCard key={`${s.id}-${i}`} stand={s} compact />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Supporter wall */}
-      <section className="mt-14">
-        <h2 className="font-display font-semibold text-2xl">{t('wall.title')}</h2>
-        <p className="text-sm text-sub mt-1 mb-5">{t('wall.sub')}</p>
-        <SupporterWall entries={wall} limit={24} />
-      </section>
-
-      {/* National tilegram */}
-      <section className="mt-14" id="map">
+      {/* National tilegram — the first thing under the hero: where the
+          country is standing, denser navy = more citizens standing. */}
+      <section className="mt-4" id="map">
         <h2 className="font-display font-semibold text-2xl">{t('map.title')}</h2>
         <p className="text-sm text-sub mt-1 mb-6">{t('map.sub')}</p>
         <Tilegram countsByState={countsByState} selected={selState} onSelect={setSelState} />
+        <div className="mt-4 flex items-center justify-center gap-2 text-xs text-sub" aria-hidden="true">
+          <span>{t('map.legendLow')}</span>
+          {['#E7EBF1', '#A9C3D9', '#5F8FBF', '#2E5E9E', '#15305E'].map((c) => (
+            <span key={c} className="inline-block w-5 h-3 rounded" style={{ backgroundColor: c }} />
+          ))}
+          <span>{t('map.legendHigh')}</span>
+        </div>
         {selState && (
           <div className="card mt-6 p-5">
             <h3 className="font-display font-semibold text-lg">
@@ -116,6 +106,24 @@ export default function Home() {
             )}
           </div>
         )}
+      </section>
+
+      {/* Rotating strip of live stands */}
+      {!loading && stands.length > 0 && (
+        <section className="marquee overflow-hidden -mx-4 px-4 py-2 mt-14" aria-label={t('nav.stands')}>
+          <div className="marquee-track flex gap-4 w-max">
+            {[...stands, ...stands].map((s, i) => (
+              <StandCard key={`${s.id}-${i}`} stand={s} compact />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Supporter wall */}
+      <section className="mt-14">
+        <h2 className="font-display font-semibold text-2xl">{t('wall.title')}</h2>
+        <p className="text-sm text-sub mt-1 mb-5">{t('wall.sub')}</p>
+        <SupporterWall entries={wall} limit={24} />
       </section>
     </div>
   );
