@@ -49,21 +49,55 @@ guardrails live in the [README](../README.md); the privacy design is in
    (temporary §1 override). Restore blind ballots later via
    [privacy-architecture.md](privacy-architecture.md).
 4. **Authentication → Providers → Google**: enable it (create OAuth credentials in Google Cloud
-   Console; authorized redirect URI = `https://<project-ref>.supabase.co/auth/v1/callback`).
-5. **Authentication → URL Configuration** (required for sticky login + BharatBol branding):
-   - **Site URL** = your production origin (e.g. `https://bharatbol.pages.dev` or custom domain) —
-     *not* the `*.supabase.co` API host. This is what Supabase uses as the default return target.
-   - **Redirect URLs** must include every origin the SPA is served from, e.g.
-     `https://bharatbol.pages.dev/**`, your custom domain `/**`, and `http://localhost:5173/**`.
-   - The Google consent screen still routes through `https://<project-ref>.supabase.co` as the
-     OAuth client — that host string is Google’s redirect, not our product name. To show
-     **BharatBol** instead of a raw project URL on the consent screen:
-     1. Google Cloud Console → APIs & Services → OAuth consent screen → **App name = BharatBol**
-     2. Application home page / privacy = your `VITE_SITE_URL`
-     3. Keep Supabase as the authorized redirect URI as above
-   - Client `signInWithOAuth` uses `window.location.origin` + current path as `redirectTo`
-     (PKCE). After Google, the session is stored in `localStorage`; if login “doesn’t stick”,
-     the usual cause is a redirect URL missing from the allow list.
+   Console).
+
+5. **Two different redirect lists (do not mix them up)**
+
+   **A. Google Cloud → Credentials → OAuth 2.0 Client → Authorized redirect URIs**  
+   Only this (exactly once, no trailing slash typos):
+
+   `https://byfwdrazysblopnlahmx.supabase.co/auth/v1/callback`
+
+   Do **not** put your Workers URL here. Google talks to Supabase first; that is why
+   `*.supabase.co` appears in the address bar during sign-in. That is normal and required.
+
+   Wrong (remove if you added it):
+
+   `https://bharatbol.bharat-dudeja13.workers.dev/auth/v1/callback`  
+   `https://bharatbol.bharat-dudeja13.workers.dev//auth/v1/callback`
+
+   **B. Supabase → Authentication → URL Configuration** (this is where Workers goes)
+
+   - **Site URL:** `https://bharatbol.bharat-dudeja13.workers.dev`
+   - **Redirect URLs** (add each):
+     - `https://bharatbol.bharat-dudeja13.workers.dev/**`
+     - `http://localhost:5173/**`
+     - any custom domain later: `https://your.domain/**`
+
+   Flow:
+
+   ```
+   App (workers.dev) → Google → Supabase (*.supabase.co/callback) → App (workers.dev)?code=…
+   ```
+
+   The app already sets `redirectTo` to `window.location.origin` (your Workers host).
+   If that host is missing from Supabase Redirect URLs, login returns but the session
+   does not stick.
+
+6. **Show “BharatBol” on the Google consent screen (name, not host)**
+
+   Google Cloud → APIs & Services → **OAuth consent screen**:
+   - App name = `BharatBol`
+   - Application home page = `https://bharatbol.bharat-dudeja13.workers.dev`
+
+   The URL bar can still show `supabase.co`. To hide that host entirely you need a
+   paid Supabase **custom Auth domain** (optional later). App name is the product fix.
+
+7. **Cloudflare Build variable** (so OG / fallbacks match production):
+
+   `VITE_SITE_URL=https://bharatbol.bharat-dudeja13.workers.dev`
+
+   Then trigger a **new** build (editing the variable alone does not rebuild).
 
 ## 2. Environment
 
