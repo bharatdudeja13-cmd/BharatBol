@@ -11,7 +11,7 @@ export const DEMO_STANDS: Stand[] = [
     title: 'An independent re-audit of the 2026 NEET & CBSE examinations',
     title_hi: '2026 NEET और CBSE परीक्षाओं का स्वतंत्र पुनः-ऑडिट',
     description:
-      "A neutral, independent audit of this year's NEET and CBSE examination processes, with the findings published for everyone to read. This is not against any person or institution — it is for restoring every student's confidence in the system.",
+      "A neutral, independent audit of this year's NEET and CBSE examination processes, with the findings published for everyone to read. This is not against any person or institution - it is for restoring every student's confidence in the system.",
     description_hi:
       'इस वर्ष की NEET और CBSE परीक्षा प्रक्रियाओं का एक तटस्थ, स्वतंत्र ऑडिट, जिसके निष्कर्ष सबके लिए प्रकाशित हों।',
     category: 'education',
@@ -23,7 +23,7 @@ export const DEMO_STANDS: Stand[] = [
     title: 'Publish examination-body audit reports publicly',
     title_hi: 'परीक्षा संस्थाओं की ऑडिट रिपोर्ट सार्वजनिक हों',
     description:
-      'Every audit report of every public examination body should be published openly, as a matter of routine. Transparency is not an accusation — it is how trust is built.',
+      'Every audit report of every public examination body should be published openly, as a matter of routine. Transparency is not an accusation - it is how trust is built.',
     description_hi: 'हर सार्वजनिक परीक्षा संस्था की हर ऑडिट रिपोर्ट नियमित रूप से सार्वजनिक की जाए।',
     category: 'transparency',
     status: 'live',
@@ -34,7 +34,7 @@ export const DEMO_STANDS: Stand[] = [
     title: 'A fixed timeline to fill vacant public teaching posts',
     title_hi: 'रिक्त सरकारी शिक्षक पदों को भरने की निश्चित समय-सीमा',
     description:
-      'Lakhs of sanctioned teaching posts lie vacant across India. A clear, published timeline to fill them — with progress reported openly — would serve every child, in every state.',
+      'Lakhs of sanctioned teaching posts lie vacant across India. A clear, published timeline to fill them - with progress reported openly - would serve every child, in every state.',
     description_hi: 'लाखों स्वीकृत शिक्षक पद रिक्त हैं। इन्हें भरने की स्पष्ट, प्रकाशित समय-सीमा हर बच्चे के हित में है।',
     category: 'education',
     status: 'live',
@@ -56,7 +56,7 @@ export const DEMO_STANDS: Stand[] = [
     title: 'Faster, transparent action on youth unemployment',
     title_hi: 'युवा बेरोज़गारी पर तेज़ और पारदर्शी कार्रवाई',
     description:
-      'Regular, honest publication of employment data and a transparent, time-bound plan for youth employment — an issue that touches every family, across every party line.',
+      'Regular, honest publication of employment data and a transparent, time-bound plan for youth employment - an issue that touches every family, across every party line.',
     description_hi: 'रोज़गार के आँकड़ों का नियमित प्रकाशन और युवा रोज़गार की पारदर्शी, समयबद्ध योजना।',
     category: 'employment',
     status: 'live',

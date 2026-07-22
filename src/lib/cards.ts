@@ -110,7 +110,7 @@ function footer(
 
   ctx.fillStyle = 'rgba(255,255,255,0.65)';
   ctx.font = '500 34px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText(`${BRAND.name} — where Bharat speaks.`, 72, h - 96);
+  ctx.fillText(`${BRAND.name} - where Bharat speaks.`, 72, h - 96);
   ctx.font = '400 24px "Plus Jakarta Sans", sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.45)';
   ctx.fillText(HONEST_LINE, 72, h - 48);
@@ -182,7 +182,7 @@ export async function drawProofCard(opts: {
     y += story ? 78 : 72;
   }
 
-  // CTA only when it clears the footer block — the footer carries the
+  // CTA only when it clears the footer block - the footer carries the
   // hashtags and link regardless, so nothing essential is ever lost.
   y += 36;
   if (y <= h - 260) {
@@ -213,7 +213,7 @@ export async function drawCitizenCard(opts: {
 
   let y = opts.format === 'story' ? 520 : 400;
 
-  // "{First name} ne bola." — the badge line.
+  // "{First name} ne bola." - the badge line.
   ctx.fillStyle = '#FFFFFF';
   ctx.font = '700 116px Fraunces, serif';
   for (const line of wrapText(ctx, `${opts.firstName} ne bola.`, w - 160).slice(0, 2)) {

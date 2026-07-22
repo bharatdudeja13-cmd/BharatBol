@@ -73,7 +73,19 @@ export async function loadEvidence(filters: EvidenceFilters = {}): Promise<FeedI
     error = res2.error;
   }
   if (error) return [];
-  const list = (data as FeedItem[] | null) ?? [];
+  let list = (data as FeedItem[] | null) ?? [];
+
+  // Empty state filter: show recent approved clips so tiles never look broken.
+  if (filters.state && list.length === 0) {
+    const fb = await supabase
+      .from('feed_items')
+      .select(select)
+      .eq('status', 'approved')
+      .order('approved_at', { ascending: false })
+      .limit(filters.limit ?? 40);
+    if (!fb.error) list = (fb.data as FeedItem[] | null) ?? [];
+  }
+
   return sortEvidenceForState(list, filters.state).slice(0, filters.limit ?? 40);
 }
 
@@ -122,11 +134,13 @@ export function evidenceWatchPath(opts: {
   issue?: string | null;
   state?: string | null;
   id?: string | null;
+  stand?: string | null;
 }): string {
   const p = new URLSearchParams();
   if (opts.issue) p.set('issue', opts.issue);
   if (opts.state) p.set('state', opts.state);
   if (opts.id) p.set('id', opts.id);
+  if (opts.stand) p.set('stand', opts.stand);
   const q = p.toString();
   return q ? `/evidence?${q}` : '/evidence';
 }

@@ -126,20 +126,30 @@
   }
 }
 
-/* Rotating stand strip on the Home page */
+/* Rotating stand strip on the Home page — keeps moving, finger-scrollable */
 @keyframes bb-marquee {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }
 }
+.marquee-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.marquee-scroll::-webkit-scrollbar {
+  display: none;
+}
 .marquee-track {
   animation: bb-marquee 45s linear infinite;
+  will-change: transform;
 }
-.marquee:hover .marquee-track,
-.marquee:focus-within .marquee-track {
+.marquee-track.is-paused {
   animation-play-state: paused;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .marquee-track { animation: none; }
-  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+  .marquee-track {
+    animation: none;
+  }
 }

@@ -5,24 +5,9 @@ import { issueLabel } from '../config/issues';
 import { stateName } from '../lib/states';
 import { PLATFORM_LABEL } from '../lib/feedUrl';
 import { evidenceWatchPath } from '../state/useEvidence';
+import { evidencePoster } from '../lib/evidenceMedia';
 
-function poster(item: FeedItem): string | null {
-  if (item.thumbnail_url) return item.thumbnail_url;
-  if (item.platform === 'youtube') {
-    try {
-      const v = new URL(item.url).searchParams.get('v');
-      if (v) return `https://i.ytimg.com/vi/${v}/hqdefault.jpg`;
-    } catch {
-      /* ignore */
-    }
-  }
-  return null;
-}
-
-/**
- * Feed list card. Playback always happens in /evidence — this card only
- * previews and routes into the shared shorts player.
- */
+/** Feed list card. Playback always happens in /evidence. */
 export function FeedCard({
   item,
   onReport,
@@ -36,7 +21,8 @@ export function FeedCard({
     state: item.state,
     id: item.id,
   });
-  const img = poster(item);
+  const img = evidencePoster(item);
+  const label = item.title || issueLabel(item.issue, lang);
 
   return (
     <article className="card overflow-hidden">
@@ -44,8 +30,9 @@ export function FeedCard({
         {img ? (
           <img src={img} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-white/70 text-sm">
-            {PLATFORM_LABEL[item.platform]}
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center text-white/80 bg-gradient-to-b from-navyDeep to-[#0a1628]">
+            <span className="text-xs font-mono">{PLATFORM_LABEL[item.platform]}</span>
+            <span className="text-sm font-semibold line-clamp-3">{label}</span>
           </div>
         )}
         <span className="absolute inset-0 flex items-center justify-center">
@@ -69,13 +56,11 @@ export function FeedCard({
           <span className="text-sub font-mono">· {item.submitted_on}</span>
         </div>
 
-        {item.title && (
-          <h3 className="font-display font-semibold text-lg leading-snug">
-            <Link to={watch} className="hover:text-navy">
-              {item.title}
-            </Link>
-          </h3>
-        )}
+        <h3 className="font-display font-semibold text-lg leading-snug">
+          <Link to={watch} className="hover:text-navy">
+            {label}
+          </Link>
+        </h3>
         {item.author_name && <p className="text-sm text-sub">{item.author_name}</p>}
 
         <p className="text-[11px] text-sub font-mono">⚠ {t('feed.unverified')}</p>

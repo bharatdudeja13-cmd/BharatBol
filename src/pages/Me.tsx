@@ -130,7 +130,7 @@ export default function Me() {
               className="btn-primary text-sm"
               onClick={() =>
                 cardCanvas &&
-                void shareCanvas(cardCanvas, `${name} ${t('citizen.standsWith')} — BharatBol`, SITE_URL).then(
+                void shareCanvas(cardCanvas, `${name} ${t('citizen.standsWith')} - BharatBol`, SITE_URL).then(
                   (ok) => !ok && downloadCanvas(cardCanvas, 'bharatbol-citizen-card.png')
                 )
               }

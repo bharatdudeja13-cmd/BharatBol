@@ -12,6 +12,7 @@ import {
   strippedShareDetails,
 } from '../lib/feedUrl';
 import { Tilegram } from '../components/Tilegram';
+import { PwaInstallButton } from '../components/PwaInstallButton';
 
 /**
  * Both ingestion paths land here:
@@ -252,49 +253,12 @@ export default function AddToFeed() {
                 {t('add.rules')}
               </Link>
             </p>
+            <div className="pt-2">
+              <PwaInstallButton />
+            </div>
           </div>
-
-          <InstallAndShareGuide />
         </>
       )}
     </div>
-  );
-}
-
-function InstallAndShareGuide() {
-  const { t } = useI18n();
-  return (
-    <section className="space-y-4" aria-labelledby="add-install-heading">
-      <h2 id="add-install-heading" className="font-display font-semibold text-xl text-navy">
-        {t('add.installTitle')}
-      </h2>
-      <p className="text-sm text-sub">{t('add.installLead')}</p>
-
-      <ol className="space-y-3 text-sm">
-        <li className="card p-4 space-y-1">
-          <strong className="text-ink">{t('add.installStep1Title')}</strong>
-          <p className="text-sub">{t('add.installStep1Body')}</p>
-        </li>
-        <li className="card p-4 space-y-1">
-          <strong className="text-ink">{t('add.installStep2Title')}</strong>
-          <p className="text-sub">{t('add.installStep2Body')}</p>
-        </li>
-        <li className="card p-4 space-y-1">
-          <strong className="text-ink">{t('add.installStep3Title')}</strong>
-          <p className="text-sub">{t('add.installStep3Body')}</p>
-        </li>
-      </ol>
-
-      <div className="card p-4 space-y-2 text-sm">
-        <strong className="text-ink">{t('add.shareFromTitle')}</strong>
-        <ul className="list-disc pl-5 space-y-1.5 text-sub">
-          <li>{t('add.shareFromIg')}</li>
-          <li>{t('add.shareFromYt')}</li>
-          <li>{t('add.shareFromX')}</li>
-          <li>{t('add.shareFromFb')}</li>
-        </ul>
-        <p className="text-navy font-medium pt-1">{t('add.sharePrivacyNote')}</p>
-      </div>
-    </section>
   );
 }
