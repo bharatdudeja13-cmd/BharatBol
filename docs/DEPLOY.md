@@ -35,6 +35,13 @@ guardrails live in the [README](../README.md); the privacy design is in
 cp .env.example .env   # fill VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_SITE_URL, VITE_REPO_URL
 ```
 
+**Demo mode & launch:** with no `VITE_*` values the app serves sample data — on
+`localhost` only. A production build on any other host with missing config renders a
+visible "Configuration error" screen instead: real visitors are never shown demo numbers
+as if they were real counts. To "disable demo mode" for launch there is exactly one step:
+set the four `VITE_*` variables as build-time environment variables in the host settings
+(they are inlined by Vite at build).
+
 ## 3. Cloudflare Workers (static assets)
 
 Deployment is pinned by [`wrangler.jsonc`](../wrangler.jsonc) — that file's presence is

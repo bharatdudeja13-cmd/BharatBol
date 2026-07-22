@@ -16,6 +16,26 @@ import Me from './pages/Me';
 import About from './pages/About';
 import DataRights from './pages/DataRights';
 import Verify from './pages/Verify';
+import { configError } from './lib/supabase';
+
+/** Deployed with no backend config: a clear failure, never silent demo data. */
+function ConfigErrorScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center px-6">
+      <div className="card max-w-md p-8 text-center space-y-4">
+        <h1 className="font-display font-bold text-2xl text-navy">Configuration error</h1>
+        <p className="text-sm text-sub leading-relaxed">
+          This deployment has no database configured, so no real counts can be shown.
+          Demo data is never served on a public host. Operator: set the four{' '}
+          <code className="font-mono">VITE_*</code> build variables (see docs/DEPLOY.md) and redeploy.
+        </p>
+        <p className="text-sm text-sub leading-relaxed">
+          इस डिप्लॉयमेंट में डेटाबेस कॉन्फ़िगर नहीं है, इसलिए वास्तविक गिनती नहीं दिखाई जा सकती।
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -54,6 +74,7 @@ function JoinErrorToast() {
 }
 
 export default function App() {
+  if (configError) return <ConfigErrorScreen />;
   return (
     <LangProvider>
       <AuthProvider>
