@@ -35,12 +35,35 @@ guardrails live in the [README](../README.md); the privacy design is in
 cp .env.example .env   # fill VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_SITE_URL, VITE_REPO_URL
 ```
 
-**Demo mode & launch:** with no `VITE_*` values the app serves sample data — on
-`localhost` only. A production build on any other host with missing config renders a
-visible "Configuration error" screen instead: real visitors are never shown demo numbers
-as if they were real counts. To "disable demo mode" for launch there is exactly one step:
-set the four `VITE_*` variables as build-time environment variables in the host settings
-(they are inlined by Vite at build).
+**Demo mode & launch:** with no `VITE_*` values, `npm run dev` serves sample data — on
+`localhost` only. A production *build* without `VITE_SUPABASE_URL` /
+`VITE_SUPABASE_ANON_KEY` is refused by Vite (see `vite.config.ts`). That is deliberate:
+real visitors must never be shown demo numbers as if they were real counts, and a
+deployed "Configuration error" page must not be the first signal that Build variables
+were missing.
+
+To ship a live site there is exactly one step that matters:
+
+1. Set the four `VITE_*` variables as **Build variables** in Cloudflare (see §3).
+2. Trigger a **fresh deployment**. Adding or editing a variable does not rebuild an
+   existing deploy — the previous bundle stays live until a new build runs.
+
+**Build vs runtime (the usual footgun):** `VITE_*` are inlined into the client JS by
+Vite at build time. Cloudflare **runtime** bindings, Worker secrets, and the
+`vars` block in `wrangler.jsonc` are *not* visible to that build. Putting
+`SUPABASE_URL` only in wrangler `vars` feeds the OG Worker; it does **not** configure
+the React app. If the live host ever shows "Configuration error", check Build
+variables first, then rebuild.
+
+**Verify the bundle** after a deploy (optional sanity check):
+
+```bash
+curl -sS https://<your-workers-host>/ | grep -oE '/assets/index-[^"]+\.js'
+# then:
+curl -sS https://<your-workers-host>/assets/index-<hash>.js | grep -o 'https://[^"]*\.supabase\.co'
+```
+
+You should see your project URL. If `grep` is empty, the build ran without Build variables.
 
 ## 3. Cloudflare Workers (static assets)
 
@@ -48,10 +71,27 @@ Deployment is pinned by [`wrangler.jsonc`](../wrangler.jsonc) — that file's pr
 deliberate: it stops Workers Builds from auto-configuring the project through the
 Cloudflare Vite plugin (which would require Vite ≥ 6 and rewrite our build pipeline).
 
-- **From the dashboard:** Workers & Pages → connect this repo. Build command `npm run build`,
-  and add the four `VITE_*` variables as **build-time** environment variables (they are inlined
-  into the client bundle by Vite).
-- **From your machine:** `npx wrangler login && npx wrangler deploy`.
+### Branch → environment
+
+| Git branch | Cloudflare environment | URL |
+|---|---|---|
+| `main` | Production | primary `*.workers.dev` (later custom domain) |
+| `develop` | Preview / staging | `*-bharatbol.<account>.workers.dev` preview URL |
+
+Feature work: branch → PR → merge into `develop` (not `main`). Promote `develop` → `main`
+only when staging looks right.
+
+### Dashboard setup
+
+- Workers & Pages → this Worker → **Settings → Build** (or Variables):
+  - Build command: `npm run build`
+  - Add all four `VITE_*` as **Build variables** on **both Production and Preview**.
+    Preview without them will fail the build (good) or, on older deploys, show the
+    config-error screen.
+- **Settings → Builds → Branch control** (wording varies): production branch = `main`;
+  enable preview deployments for `develop` (and optionally other non-main branches).
+- **From your machine:** `npx wrangler login && npx wrangler deploy` (deploys the
+  current working tree to Production; CI/dashboard is preferred for branch flow).
 - Validate config without deploying: `npx wrangler deploy --dry-run`.
 - Test the built site plus the Worker locally: `npm run build && npx wrangler dev`.
 
@@ -62,8 +102,8 @@ absorbed by the CDN — only writes and realtime touch Supabase, which is what k
 of viewers free.
 
 The Worker's runtime `vars` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`) live in `wrangler.jsonc`.
-Both are public by design and already inlined in the client bundle; never add the
-service-role key or the registrar private key there.
+Both are public by design (and match what should also be inlined in the client bundle via
+`VITE_*` Build variables); never add the service-role key or the registrar private key there.
 
 ## 4. Merkle checkpoints (tamper-evidence)
 
