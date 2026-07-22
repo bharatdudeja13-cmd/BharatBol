@@ -106,15 +106,13 @@ export default function Feed() {
         </select>
       </div>
 
-      {(issue || state) && (
-        <div className="mt-6">
-          <EvidenceStrip
-            items={filtered.slice(0, 24)}
-            issue={issue || null}
-            state={state || null}
-          />
-        </div>
-      )}
+      <div className="mt-6">
+        <EvidenceStrip
+          items={filtered.slice(0, 24)}
+          issue={issue || null}
+          state={state || null}
+        />
+      </div>
 
       {/* Loop-back to counted action */}
       {relatedStand && (

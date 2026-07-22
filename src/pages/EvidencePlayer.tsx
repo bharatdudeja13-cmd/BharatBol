@@ -4,7 +4,6 @@ import { useAuth } from '../state/AuthProvider';
 import { useStands } from '../state/StandsProvider';
 import { callFeedFn } from '../state/useFeed';
 import {
-  callReactFn,
   loadEvidence,
   loadReactionCounts,
   type ReactionCounts,
@@ -14,15 +13,7 @@ import { issueLabel, isIssueSlug } from '../config/issues';
 import { stateName } from '../lib/states';
 import { PLATFORM_LABEL } from '../lib/feedUrl';
 import type { FeedItem } from '../lib/types';
-import { REGISTRAR_PUBLIC_JWK } from '../config/registrarKey';
-import {
-  blindForReact,
-  finalizeReactReceipt,
-  getReactReceipt,
-  importRegistrarPublicKey,
-  saveReactReceipt,
-} from '../lib/blind';
-import { isLive, SUPABASE_ANON_KEY, SUPABASE_URL } from '../lib/supabase';
+import { isLive, supabase } from '../lib/supabase';
 
 function ytId(url: string): string | null {
   try {
@@ -43,11 +34,7 @@ function poster(item: FeedItem): string | null {
   return y ? `https://i.ytimg.com/vi/${y}/hqdefault.jpg` : null;
 }
 
-/**
- * Full-viewport shorts player over submitted evidence only.
- * Optimization: only the active slide mounts a heavy iframe; neighbours
- * show posters. Snap scroll; IntersectionObserver picks the active index.
- */
+/** Full-viewport shorts player. Account-linked Useful/Not useful. */
 export default function EvidencePlayer() {
   const [params] = useSearchParams();
   const issue = isIssueSlug(params.get('issue') ?? '') ? params.get('issue') : null;
@@ -60,6 +47,7 @@ export default function EvidencePlayer() {
 
   const [items, setItems] = useState<FeedItem[]>([]);
   const [counts, setCounts] = useState<Record<string, ReactionCounts>>({});
+  const [mine, setMine] = useState<Record<string, 'up' | 'down'>>({});
   const [active, setActive] = useState(0);
   const [loading, setLoading] = useState(true);
   const [muted, setMuted] = useState(true);
@@ -84,12 +72,38 @@ export default function EvidencePlayer() {
     };
   }, [issue, state, startId]);
 
-  // Scroll to start item once loaded.
+  useEffect(() => {
+    if (!supabase || !session || items.length === 0) {
+      setMine({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase!
+        .from('feed_item_reactions')
+        .select('feed_item_id,value')
+        .eq('user_id', session.user.id)
+        .in(
+          'feed_item_id',
+          items.map((i) => i.id)
+        );
+      if (cancelled) return;
+      const m: Record<string, 'up' | 'down'> = {};
+      for (const r of data ?? []) {
+        if (r.value === 'up' || r.value === 'down') m[r.feed_item_id as string] = r.value;
+      }
+      setMine(m);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session, items]);
+
   useEffect(() => {
     if (loading || items.length === 0) return;
-    const el = slideRefs.current[active];
-    el?.scrollIntoView({ block: 'start' });
-  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps -- only on first load
+    slideRefs.current[active]?.scrollIntoView({ block: 'start' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
 
   useEffect(() => {
     const root = scrollerRef.current;
@@ -120,49 +134,24 @@ export default function EvidencePlayer() {
 
   const react = useCallback(
     async (item: FeedItem, value: 'up' | 'down') => {
-      if (!isLive) return;
+      if (!isLive || !supabase) return;
       if (!session) {
         await signIn();
         return;
       }
-      if (!REGISTRAR_PUBLIC_JWK) return;
       setBusyId(item.id);
       try {
-        let receipt = getReactReceipt(item.id);
-        const prevValue = receipt?.value;
-        if (!receipt) {
-          const pub = await importRegistrarPublicKey(REGISTRAR_PUBLIC_JWK);
-          const sessionBlind = await blindForReact(pub, item.id);
-          const res = await callReactFn(
-            'react-issue',
-            { feed_item_id: item.id, blinded_b64: sessionBlind.blinded_b64 },
-            session.access_token
-          );
-          if (res.status === 409) {
-            // Already issued on another device without local receipt — cannot react here.
-            return;
-          }
-          if (!res.ok) return;
-          const data = (await res.json()) as { blind_sig_b64: string };
-          receipt = await finalizeReactReceipt(pub, sessionBlind, data.blind_sig_b64);
-          saveReactReceipt(receipt);
-        }
-        const cast = await fetch(`${SUPABASE_URL}/functions/v1/react-cast`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
+        const prevValue = mine[item.id];
+        const { error } = await supabase.from('feed_item_reactions').upsert(
+          {
+            user_id: session.user.id,
             feed_item_id: item.id,
-            token: receipt.token,
-            sig_b64: receipt.sig_b64,
             value,
-          }),
-        });
-        if (!cast.ok) return;
-        saveReactReceipt({ ...receipt, value });
+          },
+          { onConflict: 'user_id,feed_item_id' }
+        );
+        if (error) return;
+        setMine((m) => ({ ...m, [item.id]: value }));
         setCounts((prev) => {
           const cur = prev[item.id] ?? { ups: 0, downs: 0 };
           const next = { ...cur };
@@ -176,7 +165,7 @@ export default function EvidencePlayer() {
         setBusyId(null);
       }
     },
-    [session, signIn]
+    [session, signIn, mine]
   );
 
   const report = async (item: FeedItem) => {
@@ -229,7 +218,7 @@ export default function EvidencePlayer() {
           const isActive = idx === active;
           const near = Math.abs(idx - active) <= 1;
           const c = counts[item.id] ?? { ups: 0, downs: 0 };
-          const mine = getReactReceipt(item.id)?.value;
+          const my = mine[item.id];
           const yid = item.platform === 'youtube' ? ytId(item.url) : null;
           const iid = item.platform === 'instagram' ? igId(item.url) : null;
           const img = poster(item);
@@ -243,7 +232,6 @@ export default function EvidencePlayer() {
               data-idx={idx}
               className="relative h-[100dvh] w-full snap-start snap-always flex items-center justify-center bg-black"
             >
-              {/* Poster always; iframe only when active (and keep near for one-frame prefetch). */}
               {img && !(isActive && (yid || iid)) && (
                 <img
                   src={img}
@@ -307,7 +295,7 @@ export default function EvidencePlayer() {
                     disabled={busyId === item.id}
                     onClick={() => void react(item, 'up')}
                     className={`rounded-full px-3 py-1.5 text-sm font-semibold border ${
-                      mine === 'up' ? 'bg-white text-navy border-white' : 'border-white/40'
+                      my === 'up' ? 'bg-white text-navy border-white' : 'border-white/40'
                     }`}
                   >
                     {t('evidence.useful')} · {c.ups}
@@ -317,7 +305,7 @@ export default function EvidencePlayer() {
                     disabled={busyId === item.id}
                     onClick={() => void react(item, 'down')}
                     className={`rounded-full px-3 py-1.5 text-sm font-semibold border ${
-                      mine === 'down' ? 'bg-white text-navy border-white' : 'border-white/40'
+                      my === 'down' ? 'bg-white text-navy border-white' : 'border-white/40'
                     }`}
                   >
                     {t('evidence.notUseful')} · {c.downs}

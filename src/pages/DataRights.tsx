@@ -45,25 +45,28 @@ export default function DataRights() {
                 <td className="p-3 text-sub">Only as aggregates / with wall opt-in</td>
               </tr>
               <tr>
-                <td className="p-3">Token issuance record</td>
+                <td className="p-3">Which issues you stand for</td>
                 <td className="p-3 text-sub">
-                  One-per-account dedup — issued for every issue at once, so it reveals no preference
+                  Account-linked commitments (temporary mode) — operators with database access can
+                  see the link; the public site shows counts only
+                </td>
+                <td className="p-3 text-sub">Public as counts only</td>
+              </tr>
+              <tr>
+                <td className="p-3">Evidence reactions (useful / not)</td>
+                <td className="p-3 text-sub">One reaction per account per clip</td>
+                <td className="p-3 text-sub">Public as counts only</td>
+              </tr>
+              <tr>
+                <td className="p-3">Feed submissions</td>
+                <td className="p-3 text-sub">
+                  Sealed ledger for rate-limit / takedown — never shown on the public feed
                 </td>
                 <td className="p-3 font-semibold text-green">Never</td>
               </tr>
               <tr>
-                <td className="p-3">Which issues you stand for</td>
-                <td className="p-3 text-sub">
-                  Stored only as anonymous ballots that cannot be linked to any account — by anyone,
-                  including us. The proof (receipt) stays in your browser.
-                </td>
-                <td className="p-3 text-sub">Public as anonymous counts only</td>
-              </tr>
-              <tr>
                 <td className="p-3">Wall entry (if you opt in)</td>
-                <td className="p-3 text-sub">
-                  Voluntary publicity — account-linked so you can rename, opt out, or erase it
-                </td>
+                <td className="p-3 text-sub">Voluntary publicity</td>
                 <td className="p-3 text-sub">First name + state only</td>
               </tr>
             </tbody>
@@ -80,8 +83,8 @@ export default function DataRights() {
         <ul className="list-disc pl-5 text-sub space-y-2">
           <li><strong className="text-ink">See &amp; correct:</strong> your name, state, and wall preference are editable in your profile.</li>
           <li><strong className="text-ink">Opt out:</strong> untick the wall option and your name disappears from all public walls — retroactively.</li>
-          <li><strong className="text-ink">Withdraw:</strong> remove any stand at any time using the receipt held in your browser; the public count decreases immediately. (Keep a receipts backup — without it, nobody, including us, can touch your anonymous ballot.)</li>
-          <li><strong className="text-ink">Erase:</strong> delete your account from your profile page. The app first withdraws every stand this browser knows of (counts adjust), then permanently removes your profile, issuance records, and wall entries. Anonymous ballots without receipts are exactly that — anonymous — and contain nothing traceable to you.</li>
+          <li><strong className="text-ink">Withdraw:</strong> remove any stand from your profile or the stand page; the public count decreases immediately.</li>
+          <li><strong className="text-ink">Erase:</strong> delete your account from your profile page. Stands and reactions cascade away with the account; counts adjust.</li>
         </ul>
       </section>
 
@@ -100,8 +103,6 @@ export default function DataRights() {
           </p>
         )}
       </section>
-
-      <section className="card p-5 text-sm text-sub">{t('disclaimer')}</section>
     </div>
   );
 }

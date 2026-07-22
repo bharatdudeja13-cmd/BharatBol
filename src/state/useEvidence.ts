@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { supabase, isLive, SUPABASE_URL, SUPABASE_ANON_KEY } from '../lib/supabase';
+import { supabase, isLive } from '../lib/supabase';
 import type { FeedItem } from '../lib/types';
 import { DEMO_FEED } from '../lib/demoFeed';
 
@@ -74,22 +74,6 @@ export function useEvidence(filters: EvidenceFilters) {
   }, [reload]);
 
   return { items, counts, setCounts, loading, reload };
-}
-
-export async function callReactFn(
-  name: 'react-issue' | 'react-cast' | 'react-withdraw',
-  body: unknown,
-  accessToken?: string
-): Promise<Response> {
-  return fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${accessToken ?? SUPABASE_ANON_KEY}`,
-    },
-    body: JSON.stringify(body),
-  });
 }
 
 export function evidenceWatchPath(opts: {
