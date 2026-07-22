@@ -21,7 +21,9 @@ same issue → state → submit flow. Path B is complete on its own; PWA install
 ("share directly next time") but never assumed.
 
 Both paths require login — for rate-limiting and abuse control only. **The public never
-sees who submitted anything.**
+sees who submitted anything.** Before storage, URLs are rewritten to a **canonical public
+form** with personal share/tracking tags stripped (`igsh`, `fbclid`, `si`, …) so a link
+sitting in BharatBol cannot be traced back to the citizen who brought it in.
 
 ## 2. Data model
 

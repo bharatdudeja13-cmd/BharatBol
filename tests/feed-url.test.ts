@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { parseSocialUrl, findSocialUrl } from '../src/lib/feedUrl';
+import { parseSocialUrl, findSocialUrl, strippedShareDetails } from '../src/lib/feedUrl';
 
 describe('canonicalization collapses duplicates', () => {
   it('all YouTube forms of one video canonicalize identically', () => {
@@ -41,6 +41,15 @@ describe('canonicalization collapses duplicates', () => {
     expect(parseSocialUrl('https://www.instagram.com/p/AbC123/')?.canon).not.toBe(
       parseSocialUrl('https://www.instagram.com/reel/AbC123/')?.canon
     );
+  });
+
+  it('personal share tags are dropped from the stored canon', () => {
+    const dirty =
+      'https://www.instagram.com/reel/DbFPTekxTVb/?igsh=MW94ZGozamQxOGN0ag==';
+    const parsed = parseSocialUrl(dirty);
+    expect(parsed?.canon).toBe('https://www.instagram.com/reel/DbFPTekxTVb/');
+    expect(parsed?.canon).not.toMatch(/igsh/);
+    expect(strippedShareDetails(dirty, parsed!.canon)).toBe(true);
   });
 });
 
