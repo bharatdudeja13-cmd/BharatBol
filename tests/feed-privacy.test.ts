@@ -94,6 +94,19 @@ describe('nothing is published without a human', () => {
   it('a report pulls an approved item out of the public feed', () => {
     const src = read('supabase/functions/feed-report/index.ts');
     expect(src).toMatch(/patch\.status = 're_review'/);
+    // Launch policy is hide-on-first-report, routed through one named seam
+    // so a later threshold / trusted-reporter rule has an obvious home.
+    expect(src).toMatch(/function shouldPullToReReview/);
+    expect(src).toMatch(/SEAM/);
+  });
+
+  it('the mod queue prioritises re_review (hidden-on-report) above new pendings', () => {
+    const src = read('supabase/functions/feed-moderate/index.ts');
+    expect(src).toMatch(/re_review:\s*0/);
+    expect(src).toMatch(/pending:\s*1/);
+    const admin = read('src/pages/Admin.tsx');
+    expect(admin).toMatch(/mod\.sectionReReview/);
+    expect(admin).toMatch(/status === 're_review'/);
   });
 });
 

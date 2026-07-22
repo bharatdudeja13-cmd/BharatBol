@@ -63,16 +63,21 @@ ledger; URL allowlist (YouTube, X, Instagram hosts only at launch); auto pre-fla
 1. **Automated pre-checks (at submit):** URL allowlist + parse; canonical dedup;
    rate limit; a conservative keyword screen over fetched title/author that only sets
    `flagged=true` for **priority human review** — it never auto-approves or auto-rejects.
-2. **Human review (admin UI, `/admin`):** members of `admins` see the pending queue
-   (flagged first), can **approve** (confirming/correcting issue + state), **reject**
-   with a reason code — `doxxing · violence · targeting · sexual · minor · misinfo ·
-   offtopic · duplicate · other` — or mark **needs-info**.
+2. **Human review (admin UI, `/admin`):** members of `admins` see the queue with
+   **`re_review` (hidden-on-report) first**, then flagged pendings, then the rest —
+   so a report that pulled content off the public feed gets a fast look. They can
+   **approve** (confirming/correcting issue + state), **reject** with a reason code —
+   `doxxing · violence · targeting · sexual · minor · misinfo · offtopic · duplicate ·
+   other` — or mark **needs-info**.
 3. **Reports (viewers, creators, affected parties):** every public item has a report
    button (no login required — creators and affected people may have no account). Per the
    spec, **a reported item is pulled to `re_review` immediately** and disappears from the
    public feed until a human re-reviews. Trade-off stated honestly: one bad-faith report
    can temporarily hide an item; at scale this needs a threshold/trust model — accepted
    for launch because wrongly-hidden beats wrongly-shown for this content class.
+   **Seam (not built):** `shouldPullToReReview` in `feed-report` is the single place to
+   swap hide-on-first-report for a threshold / trusted-reporter rule without touching
+   the queue priority or the public-read policy.
 4. **Scaling path (flagged, not built):** moderation is solo-operator today. The design
    keeps every decision in one place (`feed-moderate` function + status/reason columns) so
    it can move to a small neutral panel later: multiple `admins`, two-person agreement for

@@ -1,8 +1,11 @@
 /**
  * feed-moderate — the ONLY path to publication. Admin-gated.
  *
- * Actions: list (pending/flagged/re_review queue), approve (confirming or
+ * Actions: list (pending / needs_info / re_review queue), approve (confirming or
  * correcting issue + state), reject (with a reason code), needs_info.
+ *
+ * Queue order (intentional): re_review first (already hidden from the public
+ * feed — fast re-review), then flagged pendings, then report count, then age.
  *
  * Callers must be in the sealed `admins` table. The queue returned here
  * contains no submitter identity: moderators judge the content, not the
@@ -62,13 +65,23 @@ Deno.serve(async (req) => {
       .from('feed_items')
       .select('id,url,platform,title,author_name,thumbnail_url,issue,state,status,flagged,reports,submitted_on')
       .in('status', ['pending', 'needs_info', 're_review'])
-      // Flagged and reported items first — priority review.
-      .order('flagged', { ascending: false })
-      .order('reports', { ascending: false })
-      .order('submitted_on', { ascending: true })
       .limit(200);
     if (error) return json({ error: 'queue unavailable' }, 500);
-    return json({ items: data ?? [] });
+
+    // Priority: re_review (hidden from public — fast path) → flagged →
+    // report count → oldest. In-memory so status rank is explicit; a later
+    // threshold rule still lands items here via status='re_review'.
+    const rank: Record<string, number> = { re_review: 0, pending: 1, needs_info: 2 };
+    const items = [...(data ?? [])].sort((a, b) => {
+      const ra = rank[a.status as string] ?? 9;
+      const rb = rank[b.status as string] ?? 9;
+      if (ra !== rb) return ra - rb;
+      if (!!a.flagged !== !!b.flagged) return a.flagged ? -1 : 1;
+      const rep = (b.reports as number ?? 0) - (a.reports as number ?? 0);
+      if (rep !== 0) return rep;
+      return String(a.submitted_on ?? '').localeCompare(String(b.submitted_on ?? ''));
+    });
+    return json({ items });
   }
 
   if (!body.id) return json({ error: 'missing id' }, 400);

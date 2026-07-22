@@ -5,10 +5,10 @@
  * have no BharatBol account, and a takedown route that demands a login is
  * not a real takedown route. Nothing about the reporter is stored.
  *
- * A report pulls an approved item straight to `re_review`, so it leaves
- * the public feed until a human looks again. Honest trade-off (see the
- * design doc): a bad-faith report can temporarily hide an item; for this
- * content class, wrongly-hidden beats wrongly-shown.
+ * Launch policy: hide-on-report — an approved item goes to `re_review` on
+ * the first report and leaves the public feed until a human looks again.
+ * Honest trade-off (see the design doc): a bad-faith report can temporarily
+ * hide an item; for this content class, wrongly-hidden beats wrongly-shown.
  */
 import { adminClient, json, preflight, UUID_RE } from '../_shared/common.ts';
 
@@ -16,6 +16,20 @@ const REASONS = [
   'doxxing', 'violence', 'targeting', 'sexual', 'minor',
   'misinfo', 'offtopic', 'copyright', 'other',
 ];
+
+/**
+ * SEAM — threshold / trusted-reporter (not built yet).
+ *
+ * Today every approved item is pulled on the first report. When abuse at
+ * scale appears, replace this body with something like:
+ *   return item.reports + 1 >= REPORT_HIDE_THRESHOLD
+ *     || reporterIsTrusted(/* future signal */);
+ * so one bad-faith click cannot hide content. Keep the pull-to-`re_review`
+ * path and the mod-queue priority; only the *when* changes.
+ */
+function shouldPullToReReview(item: { status: string }): boolean {
+  return item.status === 'approved';
+}
 
 Deno.serve(async (req) => {
   const pre = preflight(req);
@@ -47,10 +61,10 @@ Deno.serve(async (req) => {
     note: (body.note ?? '').slice(0, 500) || null,
   });
 
-  // Approved → re_review (out of the public feed until re-checked).
-  // Already-pending items just carry the report count into the queue.
+  // Count every report. Hide-on-report (launch) pulls approved → re_review.
+  // Already-pending / needs_info items just carry the count into the queue.
   const patch: Record<string, unknown> = { reports: (item.reports ?? 0) + 1 };
-  if (item.status === 'approved') {
+  if (shouldPullToReReview(item)) {
     patch.status = 're_review';
     patch.approved_at = null;
   }
