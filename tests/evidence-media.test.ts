@@ -44,6 +44,17 @@ describe('evidence posters', () => {
     );
     expect(c[0]).toContain('i.ytimg.com/vi/dQw4w9WgXcQ');
   });
+
+  it('prefers YouTube CDN over a broken stored thumbnail', () => {
+    const c = evidencePosterCandidates(
+      base({
+        platform: 'youtube',
+        url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        thumbnail_url: 'https://example.com/broken.jpg',
+      })
+    );
+    expect(c[0]).toContain('i.ytimg.com');
+  });
 });
 
 describe('languages', () => {

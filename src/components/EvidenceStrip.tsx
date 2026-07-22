@@ -70,7 +70,7 @@ export function EvidenceStrip({
           <p className="text-xs text-sub mt-0.5">{t('evidence.sub')}</p>
         </div>
         <Link
-          to={evidenceWatchPath({ issue, state, id: items[0]?.id })}
+          to={evidenceWatchPath({ issue, state })}
           className="text-sm font-semibold text-navy underline underline-offset-4 shrink-0"
         >
           {t('evidence.watchAll')}

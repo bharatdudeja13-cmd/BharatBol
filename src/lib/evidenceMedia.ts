@@ -71,14 +71,21 @@ export function evidencePosterCandidates(item: FeedItem): string[] {
       push(raw);
     }
     push(direct);
+    // Medium size sometimes succeeds when large is blocked.
+    if (shortcode) push(`https://www.instagram.com/p/${shortcode}/media/?size=m`);
+    return out;
+  }
+
+  if (item.platform === 'youtube') {
+    const y = youtubeIdFromUrl(item.url);
+    // Prefer YouTube CDN over a stale/broken stored thumbnail.
+    push(y ? `https://i.ytimg.com/vi/${y}/hqdefault.jpg` : null);
+    push(y ? `https://i.ytimg.com/vi/${y}/mqdefault.jpg` : null);
+    push(raw);
     return out;
   }
 
   push(raw);
-  if (item.platform === 'youtube') {
-    const y = youtubeIdFromUrl(item.url);
-    push(y ? `https://i.ytimg.com/vi/${y}/hqdefault.jpg` : null);
-  }
   return out;
 }
 

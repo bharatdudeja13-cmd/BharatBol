@@ -77,14 +77,15 @@ function EvidenceRedirect() {
 }
 
 function Shell() {
-  const { pathname } = useLocation();
-  // Feed is reels-style explore: hide header/footer, keep BottomNav always.
-  const explore = pathname.startsWith('/feed');
+  const { pathname, search } = useLocation();
+  const watching = pathname.startsWith('/feed') && new URLSearchParams(search).has('id');
+  // Gallery keeps site chrome; only the reel player is immersive.
+  const immersive = watching;
 
   return (
     <div className="min-h-screen flex flex-col">
-      {!explore && <Header />}
-      <main className={`flex-1 ${explore ? `min-h-0 ${NAV_PAD}` : NAV_PAD}`}>
+      {!immersive && <Header />}
+      <main className={`flex-1 ${immersive ? `min-h-0 ${NAV_PAD}` : NAV_PAD}`}>
         <ErrorBoundary>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -103,7 +104,7 @@ function Shell() {
           </Routes>
         </ErrorBoundary>
       </main>
-      {!explore && <Footer />}
+      {!immersive && <Footer />}
       <BottomNav />
     </div>
   );

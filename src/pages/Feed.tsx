@@ -25,14 +25,14 @@ function igEmbedPath(url: string): string | null {
   return `${kind}/${m[2]}`;
 }
 
-/** Height above mobile BottomNav - reels never cover primary nav. */
+/** Full-viewport reel height above BottomNav. */
 const SLIDE_H =
   'h-[calc(100dvh-3.25rem-env(safe-area-inset-bottom))] md:h-[100dvh]';
 
 /**
- * Feed = Instagram Explore / Reels. Full-bleed vertical evidence,
- * snap scroll, poster until embed ready, bottom nav always visible.
- * Grouped context by open stand / issue. No separate Watch destination.
+ * Feed = Instagram Explore:
+ * 1) Gallery of previews (What India is seeing) - issue chips + submit CTA
+ * 2) Tap a clip → vertical reels player (id= in URL)
  */
 export default function Feed() {
   const [params, setParams] = useSearchParams();
@@ -40,6 +40,7 @@ export default function Feed() {
   const state = params.get('state');
   const startId = params.get('id');
   const standParam = params.get('stand');
+  const watching = !!startId;
 
   const { t, lang } = useI18n();
   const { session, signIn } = useAuth();
@@ -53,7 +54,6 @@ export default function Feed() {
   const [muted, setMuted] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [ready, setReady] = useState<Record<string, boolean>>({});
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLElement | null)[]>([]);
   const ytIframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -63,6 +63,22 @@ export default function Feed() {
     [stands]
   );
 
+  const closePlayer = useCallback(() => {
+    const next = new URLSearchParams(params);
+    next.delete('id');
+    setParams(next, { replace: true });
+  }, [params, setParams]);
+
+  const openPlayer = useCallback(
+    (id: string) => {
+      const next = new URLSearchParams(params);
+      next.set('id', id);
+      setParams(next);
+    },
+    [params, setParams]
+  );
+
+  // Load gallery list from filters only - changing watch id must not refetch.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -75,29 +91,37 @@ export default function Feed() {
         const st = stands.find((s) => s.id === standParam);
         if (st) next = list.filter((i) => i.issue === st.category);
       }
-
-      let startIdx = 0;
-      if (startId) {
-        let idx = next.findIndex((i) => i.id === startId);
-        if (idx < 0) {
-          const orphan = list.find((i) => i.id === startId) ?? (await loadEvidenceById(startId));
-          if (orphan) {
-            next = [orphan, ...next.filter((i) => i.id !== orphan.id)];
-            idx = 0;
-          }
-        }
-        startIdx = idx < 0 ? 0 : idx;
-      }
-
       setItems(next);
       setCounts(await loadReactionCounts(next.map((i) => i.id)));
-      setActive(startIdx);
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [issue, state, startId, standParam, stands]);
+  }, [issue, state, standParam, stands]);
+
+  // Position player when id is set / list arrives.
+  useEffect(() => {
+    if (!startId || items.length === 0) return;
+    const idx = items.findIndex((i) => i.id === startId);
+    if (idx >= 0) {
+      setActive(idx);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const orphan = await loadEvidenceById(startId);
+      if (cancelled || !orphan) return;
+      setItems((prev) => {
+        if (prev.some((i) => i.id === orphan.id)) return prev;
+        return [orphan, ...prev];
+      });
+      setActive(0);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [startId, items]);
 
   useEffect(() => {
     if (!supabase || !session || items.length === 0) {
@@ -127,15 +151,19 @@ export default function Feed() {
   }, [session, items]);
 
   useEffect(() => {
-    if (loading || items.length === 0) return;
+    if (!watching || loading || items.length === 0) return;
     const id = requestAnimationFrame(() => {
-      slideRefs.current[active]?.scrollIntoView({ block: 'start' });
+      const idx = items.findIndex((i) => i.id === startId);
+      const el = slideRefs.current[idx >= 0 ? idx : active];
+      el?.scrollIntoView({ block: 'start' });
     });
     return () => cancelAnimationFrame(id);
+    // Only re-snap when opening a clip, not on every intersection tick.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, items.length]);
+  }, [watching, loading, startId, items.length]);
 
   useEffect(() => {
+    if (!watching) return;
     const root = scrollerRef.current;
     if (!root) return;
     const obs = new IntersectionObserver(
@@ -148,15 +176,25 @@ export default function Feed() {
             best = { idx, ratio: e.intersectionRatio };
           }
         }
-        if (best && best.ratio >= 0.55) setActive(best.idx);
+        if (best && best.ratio >= 0.55) {
+          const idx = best.idx;
+          setActive(idx);
+          const item = items[idx];
+          if (item && item.id !== startId) {
+            const next = new URLSearchParams(params);
+            next.set('id', item.id);
+            setParams(next, { replace: true });
+          }
+        }
       },
-      { root, threshold: [0.4, 0.55, 0.7, 0.85] }
+      { root, threshold: [0.35, 0.55, 0.7, 0.85] }
     );
     for (const el of slideRefs.current) if (el) obs.observe(el);
     return () => obs.disconnect();
-  }, [items.length]);
+  }, [watching, items, startId, params, setParams]);
 
   useEffect(() => {
+    if (!watching) return;
     const frame = ytIframeRef.current;
     if (!frame?.contentWindow) return;
     const cmd = muted ? 'mute' : 'unMute';
@@ -168,13 +206,19 @@ export default function Feed() {
     } catch {
       /* ignore */
     }
-  }, [muted, active]);
+  }, [muted, active, watching]);
 
   useEffect(() => {
+    if (!watching) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'j' && e.key !== 'k') return;
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'j' && e.key !== 'k' && e.key !== 'Escape')
+        return;
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT')) {
+        return;
+      }
+      if (e.key === 'Escape') {
+        closePlayer();
         return;
       }
       e.preventDefault();
@@ -186,7 +230,7 @@ export default function Feed() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [active, items.length]);
+  }, [active, items.length, watching, closePlayer]);
 
   const relatedStand = useMemo(() => {
     const item = items[active];
@@ -195,13 +239,15 @@ export default function Feed() {
   }, [items, active, standForIssue]);
 
   const setFilter = (key: 'issue' | 'state', value: string) => {
-    const next = new URLSearchParams(params);
-    if (value) next.set(key, value);
-    else next.delete(key);
-    next.delete('id');
-    next.delete('stand');
+    const next = new URLSearchParams();
+    if (key === 'issue') {
+      if (value) next.set('issue', value);
+      if (state) next.set('state', state);
+    } else {
+      if (issue) next.set('issue', issue);
+      if (value) next.set('state', value);
+    }
     setParams(next, { replace: true });
-    setFiltersOpen(false);
   };
 
   const react = useCallback(
@@ -226,12 +272,12 @@ export default function Feed() {
         setMine((m) => ({ ...m, [item.id]: value }));
         setCounts((prev) => {
           const cur = prev[item.id] ?? { ups: 0, downs: 0 };
-          const next = { ...cur };
-          if (prevValue === 'up') next.ups = Math.max(0, next.ups - 1);
-          if (prevValue === 'down') next.downs = Math.max(0, next.downs - 1);
-          if (value === 'up') next.ups += 1;
-          else next.downs += 1;
-          return { ...prev, [item.id]: next };
+          const n = { ...cur };
+          if (prevValue === 'up') n.ups = Math.max(0, n.ups - 1);
+          if (prevValue === 'down') n.downs = Math.max(0, n.downs - 1);
+          if (value === 'up') n.ups += 1;
+          else n.downs += 1;
+          return { ...prev, [item.id]: n };
         });
       } finally {
         setBusyId(null);
@@ -246,6 +292,110 @@ export default function Feed() {
     setItems((prev) => prev.filter((x) => x.id !== item.id));
   };
 
+  if (!watching) {
+    return (
+      <div className="mx-auto max-w-5xl px-4 pt-4 pb-6 space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="font-display font-bold text-2xl text-navy truncate">{t('feed.title')}</h1>
+            <p className="text-sm text-sub mt-1 leading-snug">{t('feed.subShort')}</p>
+          </div>
+          <Link
+            to="/add"
+            className="shrink-0 inline-flex items-center justify-center min-h-11 px-4 rounded-2xl bg-saffron text-navy text-sm font-bold shadow-lift whitespace-nowrap"
+          >
+            {t('feed.submitEvidence')}
+          </Link>
+        </div>
+        <p className="text-xs text-sub">{t('feed.submitHint')}</p>
+
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+          <button
+            type="button"
+            className={`shrink-0 rounded-full px-3.5 py-2 text-sm font-semibold border min-h-10 ${
+              !issue ? 'bg-navy text-white border-navy' : 'bg-white text-sub border-line'
+            }`}
+            onClick={() => setFilter('issue', '')}
+          >
+            {t('feed.allIssues')}
+          </button>
+          {ISSUES.map((i) => (
+            <button
+              key={i.slug}
+              type="button"
+              className={`shrink-0 rounded-full px-3.5 py-2 text-sm font-semibold border min-h-10 ${
+                issue === i.slug ? 'bg-navy text-white border-navy' : 'bg-white text-sub border-line'
+              }`}
+              onClick={() => setFilter('issue', i.slug)}
+            >
+              {issueLabel(i.slug, lang)}
+            </button>
+          ))}
+        </div>
+
+        <select
+          value={state ?? ''}
+          onChange={(e) => setFilter('state', e.target.value)}
+          className="w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm"
+          aria-label={t('feed.allStates')}
+        >
+          <option value="">{t('feed.allStates')}</option>
+          {STATES.map((s) => (
+            <option key={s.code} value={s.code}>
+              {stateName(s.code, lang)}
+            </option>
+          ))}
+        </select>
+
+        {loading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="aspect-[9/16] rounded-2xl bg-faint border border-line animate-pulse" />
+            ))}
+          </div>
+        ) : items.length === 0 ? (
+          <div className="rounded-3xl border border-line bg-white p-8 text-center space-y-3">
+            <p className="text-sub text-sm">{t('feed.empty')}</p>
+            <Link to="/add" className="inline-flex btn-primary text-sm">
+              {t('feed.submitEvidence')}
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+            {items.map((item) => {
+              const label = item.title?.trim() || issueLabel(item.issue, lang);
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => openPlayer(item.id)}
+                  className="group relative rounded-2xl overflow-hidden border border-line text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-saffron"
+                >
+                  <EvidenceThumb item={item} className="aspect-[9/16]">
+                    <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                    <span className="absolute bottom-2 left-2 right-2 space-y-0.5">
+                      <span className="block text-[10px] font-mono uppercase tracking-wide text-saffron">
+                        {PLATFORM_LABEL[item.platform]}
+                      </span>
+                      <span className="block text-xs font-semibold text-white line-clamp-2 leading-snug">
+                        {label}
+                      </span>
+                    </span>
+                    <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/25">
+                      <span className="rounded-full bg-saffron text-navy text-xs font-bold px-3 py-1.5">
+                        {t('feed.play')}
+                      </span>
+                    </span>
+                  </EvidenceThumb>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className={`${SLIDE_H} bg-navyDeep text-white flex flex-col items-center justify-center gap-3 px-6`}>
@@ -258,42 +408,26 @@ export default function Feed() {
   if (items.length === 0) {
     return (
       <div className={`${SLIDE_H} bg-bg flex flex-col items-center justify-center px-6 text-center space-y-4`}>
-        <h1 className="font-display font-bold text-2xl text-navy">{t('feed.title')}</h1>
-        <p className="text-sub text-sm max-w-sm">{t('feed.empty')}</p>
-        <p className="text-xs text-sub max-w-sm">{t('feed.submitHint')}</p>
-        <div className="flex flex-wrap gap-3 justify-center">
-          <Link to="/add" className="btn-primary">
-            {t('feed.submitEvidence')}
-          </Link>
-          {(issue || state) && (
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => {
-                setParams({}, { replace: true });
-              }}
-            >
-              {t('feed.allIssues')}
-            </button>
-          )}
-        </div>
+        <p className="text-sub text-sm">{t('feed.empty')}</p>
+        <button type="button" className="btn-secondary" onClick={closePlayer}>
+          {t('feed.backToGallery')}
+        </button>
       </div>
     );
   }
 
   return (
     <div className={`relative ${SLIDE_H} bg-black text-white overflow-hidden`}>
-      {/* Minimal chrome */}
-      <header className="absolute top-0 inset-x-0 z-50 flex items-center justify-between gap-2 px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 bg-gradient-to-b from-black/75 to-transparent pointer-events-none">
+      <header className="absolute top-0 inset-x-0 z-50 flex items-center gap-2 px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 bg-gradient-to-b from-black/80 to-transparent">
         <button
           type="button"
-          className="pointer-events-auto min-h-10 px-3 rounded-full bg-white/10 text-xs font-semibold backdrop-blur"
-          onClick={() => setFiltersOpen((o) => !o)}
+          className="shrink-0 min-h-10 min-w-10 rounded-full bg-white/15 text-sm font-bold backdrop-blur"
+          onClick={closePlayer}
+          aria-label={t('feed.backToGallery')}
         >
-          {issue ? issueLabel(issue, lang) : t('feed.allIssues')}
-          {state ? ` · ${stateName(state, lang)}` : ''}
+          ←
         </button>
-        <p className="text-[11px] font-mono truncate text-white/80 max-w-[40%] text-center">
+        <p className="min-w-0 flex-1 text-center text-[11px] font-mono truncate text-white/85">
           {relatedStand
             ? lang === 'hi' && relatedStand.title_hi
               ? relatedStand.title_hi
@@ -301,79 +435,27 @@ export default function Feed() {
             : items[active]
               ? issueLabel(items[active].issue, lang)
               : t('feed.title')}
-          <span className="block text-white/45 tabular-nums">
-            {active + 1}/{items.length}
+          <span className="text-white/45">
+            {' '}
+            · {active + 1}/{items.length}
           </span>
         </p>
-        <div className="pointer-events-auto flex items-center gap-1.5 shrink-0">
-          <Link
-            to="/add"
-            className="min-h-10 px-3 rounded-full bg-saffron text-navy text-xs font-bold backdrop-blur"
-          >
-            {t('feed.submitEvidence')}
-          </Link>
-          <button
-            type="button"
-            className="min-h-10 px-3 rounded-full bg-white/10 text-xs font-semibold backdrop-blur"
-            onClick={() => setMuted((m) => !m)}
-          >
-            {muted ? t('evidence.unmute') : t('evidence.mute')}
-          </button>
-        </div>
-      </header>
-
-      {filtersOpen && (
-        <div
-          className="absolute inset-0 z-[55] bg-black/60 backdrop-blur-sm flex flex-col justify-end pointer-events-auto"
-          onClick={(e) => e.target === e.currentTarget && setFiltersOpen(false)}
+        <button
+          type="button"
+          className="shrink-0 min-h-10 px-3 rounded-full bg-white/15 text-xs font-semibold backdrop-blur"
+          onClick={() => setMuted((m) => !m)}
         >
-          <div className="bg-bg text-ink rounded-t-3xl p-5 space-y-4 max-h-[min(70%,calc(100%-3.5rem))] overflow-y-auto pb-4">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="font-display font-semibold text-lg text-navy">{t('feed.title')}</h2>
-              <Link to="/add" className="btn-primary text-sm !min-h-10 !px-4 shrink-0">
-                {t('feed.submitEvidence')}
-              </Link>
-            </div>
-            <p className="text-xs text-sub -mt-2">{t('feed.submitHint')}</p>
-            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-              <button
-                type="button"
-                className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold border ${
-                  !issue ? 'bg-navy text-white border-navy' : 'bg-white text-sub border-line'
-                }`}
-                onClick={() => setFilter('issue', '')}
-              >
-                {t('feed.allIssues')}
-              </button>
-              {ISSUES.map((i) => (
-                <button
-                  key={i.slug}
-                  type="button"
-                  className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold border ${
-                    issue === i.slug ? 'bg-navy text-white border-navy' : 'bg-white text-sub border-line'
-                  }`}
-                  onClick={() => setFilter('issue', i.slug)}
-                >
-                  {issueLabel(i.slug, lang)}
-                </button>
-              ))}
-            </div>
-            <select
-              value={state ?? ''}
-              onChange={(e) => setFilter('state', e.target.value)}
-              className="w-full rounded-xl border border-line bg-faint px-4 py-2.5 text-sm"
-              aria-label={t('feed.allStates')}
-            >
-              <option value="">{t('feed.allStates')}</option>
-              {STATES.map((s) => (
-                <option key={s.code} value={s.code}>
-                  {stateName(s.code, lang)}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      )}
+          {muted ? t('evidence.unmute') : t('evidence.mute')}
+        </button>
+        <Link
+          to="/add"
+          className="shrink-0 min-h-10 min-w-10 flex items-center justify-center rounded-full bg-saffron text-navy text-lg font-bold"
+          aria-label={t('feed.submitEvidence')}
+          title={t('feed.submitEvidence')}
+        >
+          ＋
+        </Link>
+      </header>
 
       <div
         ref={scrollerRef}
@@ -390,6 +472,7 @@ export default function Feed() {
           const embedReady = !!ready[item.id];
           const stand: Stand | null = standForIssue(item.issue);
           const stood = !!(stand && joined.has(stand.id));
+          const hidePoster = isActive && embedReady && !!yid;
 
           return (
             <section
@@ -398,37 +481,40 @@ export default function Feed() {
                 slideRefs.current[idx] = el;
               }}
               data-idx={idx}
-              className="relative h-full w-full snap-start snap-always flex items-center justify-center bg-black"
+              className={`relative w-full snap-start snap-always flex items-center justify-center bg-navyDeep ${SLIDE_H}`}
             >
               <EvidenceThumb
                 item={item}
                 eager={near}
                 className={`absolute inset-0 transition-opacity duration-300 ${
-                  isActive && embedReady && (yid || igPath) ? 'opacity-0' : 'opacity-100'
+                  hidePoster ? 'opacity-0' : 'opacity-100'
                 }`}
               />
 
-              {isActive && yid && (
+              {near && yid && (
                 <iframe
-                  ref={ytIframeRef}
+                  ref={isActive ? ytIframeRef : undefined}
                   className={`absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-200 ${
-                    embedReady ? 'opacity-100' : 'opacity-0'
+                    isActive && embedReady ? 'opacity-100' : 'opacity-0'
                   }`}
-                  src={`https://www.youtube-nocookie.com/embed/${yid}?autoplay=1&rel=0&playsinline=1&modestbranding=1&mute=${muted ? 1 : 0}&enablejsapi=1&controls=0`}
+                  src={
+                    isActive
+                      ? `https://www.youtube-nocookie.com/embed/${yid}?autoplay=1&rel=0&playsinline=1&modestbranding=1&mute=${muted ? 1 : 0}&enablejsapi=1&controls=0`
+                      : `https://www.youtube-nocookie.com/embed/${yid}?autoplay=0&rel=0&playsinline=1&modestbranding=1&mute=1&enablejsapi=1&controls=0`
+                  }
                   title={item.title ?? 'YouTube'}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture"
-                  onLoad={() => setReady((r) => ({ ...r, [item.id]: true }))}
+                  onLoad={() => {
+                    if (isActive) setReady((r) => ({ ...r, [item.id]: true }));
+                  }}
                 />
               )}
 
               {isActive && igPath && (
                 <iframe
-                  className={`absolute inset-0 w-full h-full bg-transparent pointer-events-none transition-opacity duration-200 ${
-                    embedReady ? 'opacity-100' : 'opacity-0'
-                  }`}
+                  className="absolute inset-0 w-full h-full bg-transparent pointer-events-none opacity-90"
                   src={`https://www.instagram.com/${igPath}/embed/captioned/`}
                   title={item.title ?? 'Instagram'}
-                  onLoad={() => setReady((r) => ({ ...r, [item.id]: true }))}
                 />
               )}
 
@@ -441,7 +527,6 @@ export default function Feed() {
                 </div>
               )}
 
-              {/* Right-rail actions (thumb-driven) */}
               <div className="absolute right-3 bottom-36 z-20 flex flex-col items-center gap-3 pointer-events-auto">
                 <button
                   type="button"

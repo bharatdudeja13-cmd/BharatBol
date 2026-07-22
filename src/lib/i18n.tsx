@@ -132,6 +132,8 @@ const en = {
   'feed.title': 'What India is seeing',
   'feed.sub':
     'Citizen evidence by issue and state. Watch without signing in - swipe like reels. Nothing is re-hosted. Who submitted is never shown.',
+  'feed.subShort': 'Tap a clip to watch. Swipe when you are in the player.',
+  'feed.backToGallery': 'Back to gallery',
   'feed.empty': 'Nothing here yet. Add the first public reel or post.',
   'feed.allIssues': 'All issues',
   'feed.allStates': 'All states',
@@ -426,6 +428,8 @@ const hi: Record<keyof typeof en, string> = {
   'nav.add': 'फ़ीड में जोड़ें',
   'feed.title': 'भारत क्या देख रहा है',
   'feed.sub': 'नागरिक साक्ष्य - मुद्दे और राज्य के अनुसार। बिना साइन इन स्वाइप करके देखें। कुछ भी दोबारा होस्ट नहीं।',
+  'feed.subShort': 'देखने के लिए क्लिप पर टैप करें। प्लेयर में स्वाइप करें।',
+  'feed.backToGallery': 'गैलरी पर वापस',
   'feed.empty': 'अभी यहाँ कुछ नहीं है। पहली सार्वजनिक रील या पोस्ट जोड़ें।',
   'feed.allIssues': 'सभी मुद्दे',
   'feed.allStates': 'सभी राज्य',
@@ -616,26 +620,31 @@ function initialLang(): Lang {
 const Ctx = createContext<I18n>({ lang: 'en', setLang: () => {}, t: (k) => en[k] });
 
 export function LangProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>(initialLang);
+  const [lang, setLangState] = useState<Lang>(() => initialLang());
 
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
 
   const setLang = useCallback((l: Lang) => {
-    setLangState(l);
+    if (!isLangCode(l)) return;
+    setLangState((prev) => (prev === l ? prev : l));
     try {
       localStorage.setItem(LANG_STORAGE_KEY, l);
     } catch {
       /* ignore quota / private mode */
     }
-    document.documentElement.lang = l;
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = l;
+    }
   }, []);
 
   const t = useCallback(
     (key: keyof typeof en) => {
       const dict = DICTS[lang];
-      return dict?.[key] ?? en[key];
+      const fromLang = dict?.[key];
+      if (typeof fromLang === 'string' && fromLang.length > 0) return fromLang;
+      return en[key];
     },
     [lang]
   );

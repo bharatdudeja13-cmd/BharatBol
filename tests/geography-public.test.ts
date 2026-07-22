@@ -44,6 +44,15 @@ describe('phase7 geography + public counts', () => {
     const src = read('src/pages/Feed.tsx');
     expect(src).toMatch(/onLoad/);
     expect(src).toMatch(/embedReady|ready\[/);
+    expect(src).toMatch(/openPlayer|watching/);
+    expect(src).toMatch(/grid-cols-2/);
+  });
+
+  it('language picker portals and LangProvider lazy-inits from storage/browser', () => {
+    expect(read('src/components/LanguageSelector.tsx')).toMatch(/createPortal/);
+    expect(read('src/lib/i18n.tsx')).toMatch(/useState<Lang>\(\(\) => initialLang\(\)\)/);
+    expect(read('src/lib/i18n.tsx')).toMatch(/feed\.subShort/);
+    expect(read('src/lib/i18n.tsx')).toMatch(/feed\.backToGallery/);
   });
 
   it('Home evidence count and CTA route to Feed', () => {
