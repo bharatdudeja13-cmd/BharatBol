@@ -25,7 +25,7 @@ export default function Home() {
     limit: 24,
     enabled: !!selState,
   });
-  const { total: evidenceTotal } = useEvidenceCount();
+  const { total: evidenceTotal, loading: evidenceCountLoading } = useEvidenceCount();
 
   const todayTotal = useMemo(
     () => Object.values(counts).reduce((a, c) => a + c.today, 0),
@@ -77,13 +77,14 @@ export default function Home() {
             )}
           </span>
         </h1>
-        {evidenceTotal > 0 && (
-          <p className="mt-4 text-sm sm:text-base text-sub">
-            <Link to="/feed" className="font-semibold text-navy underline underline-offset-4">
-              <span className="tabular-nums">{fmt(evidenceTotal)}</span> {t('home.evidenceCount')}
-            </Link>
-          </p>
-        )}
+        <p className="mt-4 text-sm sm:text-base text-sub">
+          <Link to="/feed" className="font-semibold text-navy underline underline-offset-4">
+            <span className="tabular-nums">
+              {evidenceCountLoading || loading ? '…' : fmt(evidenceTotal)}
+            </span>{' '}
+            {t('home.evidenceCount')}
+          </Link>
+        </p>
         <p className="mt-4 font-display text-xl sm:text-2xl text-navy max-w-lg mx-auto leading-snug">
           {t('app.tagline')}
         </p>

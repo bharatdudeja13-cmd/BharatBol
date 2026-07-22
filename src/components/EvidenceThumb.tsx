@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { evidencePoster } from '../lib/evidenceMedia';
+import { useEffect, useState } from 'react';
+import { evidencePosterCandidates } from '../lib/evidenceMedia';
 import type { FeedItem } from '../lib/types';
 import { useI18n } from '../lib/i18n';
 import { issueLabel } from '../config/issues';
@@ -7,9 +7,8 @@ import { PLATFORM_LABEL } from '../lib/feedUrl';
 
 /**
  * Readable evidence poster. Never leaves an empty black box:
- * real thumbnail when available (incl. token-free Instagram /media/),
+ * tries Worker proxy → stored thumbnail → direct Instagram /media/,
  * else a branded navy placeholder with platform + title/issue.
- * Broken CDN URLs fall back via onError.
  */
 export function EvidenceThumb({
   item,
@@ -23,8 +22,12 @@ export function EvidenceThumb({
   children?: React.ReactNode;
 }) {
   const { lang } = useI18n();
-  const [failed, setFailed] = useState(false);
-  const src = failed ? null : evidencePoster(item);
+  const candidates = evidencePosterCandidates(item);
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    setIdx(0);
+  }, [item.id, item.thumbnail_url, item.url]);
+  const src = candidates[idx] ?? null;
   const label = item.title?.trim() || issueLabel(item.issue, lang);
 
   return (
@@ -45,13 +48,14 @@ export function EvidenceThumb({
       </div>
       {src && (
         <img
+          key={src}
           src={src}
           alt=""
           className="absolute inset-0 w-full h-full object-cover"
           loading={eager ? 'eager' : 'lazy'}
           decoding="async"
           referrerPolicy="no-referrer"
-          onError={() => setFailed(true)}
+          onError={() => setIdx((i) => i + 1)}
         />
       )}
       {children}

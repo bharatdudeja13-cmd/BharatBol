@@ -170,6 +170,24 @@ export default function Feed() {
     }
   }, [muted, active]);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'j' && e.key !== 'k') return;
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT')) {
+        return;
+      }
+      e.preventDefault();
+      const dir = e.key === 'ArrowDown' || e.key === 'j' ? 1 : -1;
+      const next = Math.max(0, Math.min(items.length - 1, active + dir));
+      if (next === active) return;
+      setActive(next);
+      slideRefs.current[next]?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [active, items.length]);
+
   const relatedStand = useMemo(() => {
     const item = items[active];
     if (!item) return null;
@@ -282,6 +300,9 @@ export default function Feed() {
             : items[active]
               ? issueLabel(items[active].issue, lang)
               : t('feed.title')}
+          <span className="block text-white/45 tabular-nums">
+            {active + 1}/{items.length}
+          </span>
         </p>
         <button
           type="button"
@@ -297,7 +318,7 @@ export default function Feed() {
           className="absolute inset-0 z-[55] bg-black/60 backdrop-blur-sm flex flex-col justify-end pointer-events-auto"
           onClick={(e) => e.target === e.currentTarget && setFiltersOpen(false)}
         >
-          <div className="bg-bg text-ink rounded-t-3xl p-5 space-y-4 max-h-[70%] overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          <div className="bg-bg text-ink rounded-t-3xl p-5 space-y-4 max-h-[min(70%,calc(100%-3.5rem))] overflow-y-auto pb-4">
             <div className="flex items-center justify-between">
               <h2 className="font-display font-semibold text-lg text-navy">{t('feed.title')}</h2>
               <Link to="/add" className="text-sm font-semibold text-navy underline underline-offset-4">
@@ -383,7 +404,7 @@ export default function Feed() {
                   className={`absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-200 ${
                     embedReady ? 'opacity-100' : 'opacity-0'
                   }`}
-                  src={`https://www.youtube-nocookie.com/embed/${yid}?autoplay=1&rel=0&playsinline=1&modestbranding=1&mute=1&enablejsapi=1&controls=0`}
+                  src={`https://www.youtube-nocookie.com/embed/${yid}?autoplay=1&rel=0&playsinline=1&modestbranding=1&mute=${muted ? 1 : 0}&enablejsapi=1&controls=0`}
                   title={item.title ?? 'YouTube'}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture"
                   onLoad={() => setReady((r) => ({ ...r, [item.id]: true }))}

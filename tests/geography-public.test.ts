@@ -46,6 +46,34 @@ describe('phase7 geography + public counts', () => {
     expect(src).toMatch(/embedReady|ready\[/);
   });
 
+  it('Home always surfaces evidence count (not only when > 0)', () => {
+    const home = read('src/pages/Home.tsx');
+    expect(home).toMatch(/home\.evidenceCount/);
+    expect(home).toMatch(/useEvidenceCount/);
+    expect(home).not.toMatch(/evidenceTotal > 0 &&/);
+  });
+
+  it('Instagram posters use Worker proxy without oEmbed token', () => {
+    expect(read('worker/index.ts')).toMatch(/\/api\/ig-poster\//);
+    expect(read('wrangler.jsonc')).toMatch(/\/api\/ig-poster\/\*/);
+    expect(read('src/lib/evidenceMedia.ts')).toMatch(/instagramProxyPoster|\/api\/ig-poster\//);
+    expect(read('src/lib/evidenceMedia.ts')).not.toMatch(/INSTAGRAM_OEMBED_TOKEN/);
+  });
+
+  it('language picker covers scheduled Indian languages + browser detect', () => {
+    const langs = read('src/config/languages.ts');
+    expect(langs).toMatch(/detectBrowserLang/);
+    expect(langs).toMatch(/code: 'ta'/);
+    expect(langs).toMatch(/code: 'te'/);
+    expect(read('src/components/Header.tsx')).toMatch(/LanguageSelector/);
+  });
+
+  it('Watch tab is retired; Feed is the explore destination', () => {
+    expect(read('src/components/BottomNav.tsx')).toMatch(/to="\/feed"/);
+    expect(read('src/components/BottomNav.tsx')).not.toMatch(/to="\/evidence"/);
+    expect(read('src/App.tsx')).toMatch(/EvidenceRedirect|Navigate to=\{`\/feed/);
+  });
+
   it('Home tile lists all live stands not only breakdown rows', () => {
     expect(read('src/pages/Home.tsx')).toMatch(/openStands/);
     expect(read('src/pages/Home.tsx')).toMatch(/standStates/);

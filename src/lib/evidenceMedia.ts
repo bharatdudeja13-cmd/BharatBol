@@ -24,30 +24,65 @@ export function instagramShortcode(url: string): string | null {
   return m?.[1] ?? null;
 }
 
-/**
- * Token-free Instagram poster. Instagram's public `/p/{id}/media/?size=l`
- * redirects to a JPEG — no Facebook app token, no scraping.
- * Prefer `/p/` path even for reels/tv; `/reel/.../media` often 404s.
- */
-export function instagramPublicPoster(url: string): string | null {
-  const id = instagramShortcode(url);
-  return id ? `https://www.instagram.com/p/${id}/media/?size=l` : null;
+/** Same-origin Worker proxy - avoids Instagram hotlink blocks in the browser. */
+export function instagramProxyPoster(shortcode: string): string {
+  return `/api/ig-poster/${encodeURIComponent(shortcode)}`;
 }
 
 /**
- * Best-effort poster URL for strip / player / feed.
- * Instagram never needs INSTAGRAM_OEMBED_TOKEN — public media endpoint first.
- * Callers must still fall back to a branded placeholder when the image errors.
+ * Direct Instagram public media URL (no token). Prefer the Worker proxy in
+ * the browser; keep this as a fallback candidate.
  */
-export function evidencePoster(item: FeedItem): string | null {
+export function instagramDirectPoster(shortcode: string): string {
+  return `https://www.instagram.com/p/${shortcode}/media/?size=l`;
+}
+
+/**
+ * Token-free Instagram poster URL for simple callers.
+ * Prefers same-origin `/api/ig-poster/:id` (Cloudflare Worker).
+ */
+export function instagramPublicPoster(url: string): string | null {
+  const id = instagramShortcode(url);
+  return id ? instagramProxyPoster(id) : null;
+}
+
+/**
+ * Ordered poster candidates. EvidenceThumb walks these on error so a
+ * hotlink failure still shows a real image or a branded placeholder.
+ */
+export function evidencePosterCandidates(item: FeedItem): string[] {
+  const out: string[] = [];
+  const push = (u: string | null | undefined) => {
+    const s = u?.trim();
+    if (s && !out.includes(s)) out.push(s);
+  };
+
   const raw = item.thumbnail_url?.trim();
-  if (raw) return raw;
+  const shortcode = item.platform === 'instagram' ? instagramShortcode(item.url) : null;
+  const proxy = shortcode ? instagramProxyPoster(shortcode) : null;
+  const direct = shortcode ? instagramDirectPoster(shortcode) : null;
+
+  if (item.platform === 'instagram') {
+    // Proxy first (works on Workers + vite dev middleware).
+    push(proxy);
+    if (raw && !raw.includes('instagram.com') && !raw.includes('/api/ig-poster/')) {
+      push(raw);
+    } else if (raw) {
+      push(raw);
+    }
+    push(direct);
+    return out;
+  }
+
+  push(raw);
   if (item.platform === 'youtube') {
     const y = youtubeIdFromUrl(item.url);
-    return y ? `https://i.ytimg.com/vi/${y}/hqdefault.jpg` : null;
+    push(y ? `https://i.ytimg.com/vi/${y}/hqdefault.jpg` : null);
   }
-  if (item.platform === 'instagram') {
-    return instagramPublicPoster(item.url);
-  }
-  return null;
+  return out;
+}
+
+/** Best single poster URL (first candidate). Prefer evidencePosterCandidates. */
+export function evidencePoster(item: FeedItem): string | null {
+  return evidencePosterCandidates(item)[0] ?? null;
 }

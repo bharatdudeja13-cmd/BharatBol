@@ -1,12 +1,12 @@
 /**
- * BharatBol Worker — per-stand Open Graph tags.
+ * BharatBol Worker — per-stand Open Graph tags + Instagram poster proxy.
  *
- * Only `/stand/*` reaches this Worker (see `run_worker_first` in
- * wrangler.jsonc); everything else is served straight from the CDN. For a
- * stand URL we fetch the SPA shell from the ASSETS binding and rewrite its
- * OG meta so links unfurl with the issue title and its pre-rendered image
- * on WhatsApp/X. Any failure falls through to the untouched shell — a
- * broken preview must never break the page.
+ * Routes that hit this Worker (see `run_worker_first` in wrangler.jsonc):
+ *   /stand/*           → OG rewrite for share unfurls
+ *   /api/ig-poster/*   → token-free Instagram JPEG proxy (browser hotlink safe)
+ *
+ * Everything else is served straight from the CDN. Failures fall through
+ * safely — a broken preview must never break the page.
  *
  * No count in the OG data, on purpose: a static number goes stale, and a
  * stale count on a shared link would break the honest-counts guardrail.
@@ -28,6 +28,7 @@ const CURATED: [RegExp, string][] = [
 ];
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const IG_SHORTCODE_RE = /^[A-Za-z0-9_-]{5,64}$/;
 
 function tagFor(title: string): string | null {
   for (const [re, tag] of CURATED) if (re.test(title)) return tag;
@@ -53,10 +54,61 @@ async function standTitle(env: Env, id: string): Promise<string | null> {
   return rows?.[0]?.title ?? null;
 }
 
+/**
+ * Token-free Instagram poster. Server-side fetch follows
+ * /p/{shortcode}/media/?size=l → CDN JPEG. No Facebook app token.
+ */
+async function instagramPoster(shortcode: string): Promise<Response> {
+  if (!IG_SHORTCODE_RE.test(shortcode)) {
+    return new Response('Not found', { status: 404 });
+  }
+  const src = `https://www.instagram.com/p/${shortcode}/media/?size=l`;
+  try {
+    const res = await fetch(src, {
+      redirect: 'follow',
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+        Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+    });
+    const ct = res.headers.get('content-type') ?? '';
+    if (!res.ok || !ct.startsWith('image/')) {
+      return new Response('Not found', { status: 404 });
+    }
+    return new Response(res.body, {
+      status: 200,
+      headers: {
+        'Content-Type': ct,
+        'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  } catch {
+    return new Response('Not found', { status: 404 });
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const shell = () => env.ASSETS.fetch(new Request(new URL('/', url), request));
+
+    const ig = url.pathname.match(/^\/api\/ig-poster\/([^/]+)\/?$/);
+    if (ig) {
+      if (request.method === 'OPTIONS') {
+        return new Response(null, {
+          status: 204,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          },
+        });
+      }
+      return instagramPoster(decodeURIComponent(ig[1]));
+    }
 
     const id = url.pathname.match(/^\/stand\/([^/]+)\/?$/)?.[1];
     if (!id) return shell();
@@ -69,11 +121,11 @@ export default {
       const html = (await (await shell()).text())
         .replace(
           /<meta property="og:title" content="[^"]*"/,
-          `<meta property="og:title" content="${esc(title)} — BharatBol"`
+          `<meta property="og:title" content="${esc(title)} - BharatBol"`
         )
         .replace(
           /<meta property="og:description" content="[^"]*"/,
-          '<meta property="og:description" content="Bharat, bol. Add your voice — counted, verifiable, anonymous."'
+          '<meta property="og:description" content="Bharat, bol. Add your voice - counted, verifiable, anonymous."'
         )
         .replace(
           '</head>',
