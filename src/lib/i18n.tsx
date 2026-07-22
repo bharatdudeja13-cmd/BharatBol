@@ -22,7 +22,7 @@ const en = {
   'counts.standing': 'citizens standing',
   'counts.taken': 'stands taken across India',
   'counts.today': 'today',
-  'counts.verified': 'One Google account, one stand per issue. Counts show how many - not who.',
+  'counts.verified': 'One account, one stand per issue. Counts show how many - not who.',
   'stand.standWith': 'I stand with this',
   'stand.standing': 'You stand with this',
   'stand.share': 'Share',
@@ -85,7 +85,7 @@ const en = {
   'profile.saved': 'Saved',
   'profile.myStands': 'Issues you stand for',
   'profile.none': 'You haven’t taken a stand yet.',
-  'profile.signInFirst': 'Sign in with Google to stand and get your citizen card.',
+  'profile.signInFirst': 'Sign in to stand and get your citizen card.',
   'profile.delete': 'Delete my account & data',
   'profile.deleteWarn':
     'This permanently removes your account, your profile, and every stand you have taken. Counts will decrease accordingly. This cannot be undone.',
@@ -110,9 +110,26 @@ const en = {
   'verify.run': 'Run the recount now',
   'verify.mine': 'Your stands',
   'verify.demo': 'Demo mode shows sample data - connect a live instance to run a real recount.',
-  'verify.accountMode':
-    'Re-read public stand counts and list the stands on this Google account.',
+  'verify.publicMode':
+    'Anyone can re-read public stand counts here - no sign-in required. Totals come from the open aggregate view.',
+  'verify.mineHint': 'Optional: sign in to see which issues you stood on with this account.',
   'verify.mineNoneAccount': 'You have not stood on any issue yet with this account.',
+  'ledger.title': 'Public record',
+  'ledger.sub':
+    'The public verification record for this stand. Readable without signing in - honest counts anyone can re-check.',
+  'ledger.total': 'Published total',
+  'ledger.today': 'Added today',
+  'ledger.rule':
+    'One signed-in account, one stand per issue. Withdraw anytime. Counts show how many - not who.',
+  'ledger.liveNote':
+    'Loaded from the public stand_counts aggregate (anon-readable). No login. Re-check every stand on Verify, or open checkpoint tools in the repo when a public log is published.',
+  'ledger.demoNote':
+    'Demo mode - these numbers are sample data, not a live public log. Connect a live instance for real aggregates.',
+  'ledger.errorNote':
+    'Could not refresh the public aggregate just now. The numbers above may be from the page cache - try again, or open Verify.',
+  'ledger.refresh': 'Refresh public record',
+  'ledger.verify': 'Verify all stands',
+  'ledger.checkpoints': 'Checkpoint tools',
   'nav.feed': 'Feed',
   'nav.add': 'Add to feed',
   'feed.title': 'What India is seeing',
@@ -214,15 +231,18 @@ const en = {
   'about.title': 'About BharatBol',
   'about.missionTitle': 'The mission',
   'about.mission1':
-    'BharatBol is a national civic square. Any Indian - whatever party they support, or none - can stand on an issue and be counted in the open.',
+    'BharatBol is a national civic square. Explore the Feed, watch citizen evidence, and stand on an issue - whatever party you support, or none - so the count is public.',
   'about.mission2':
-    'Public promise: prove how many - and never show who on walls and maps (names only if you opt in).',
-  'about.evidenceTitle': 'Why citizen evidence',
+    'Public promise: prove how many stood on each issue - and never show who on walls and maps (names only if you opt in).',
+  'about.feedTitle': 'Feed explore',
+  'about.feedBody':
+    'The Feed is how you browse what people are sharing from the ground - by issue and state, in one player. Watch without signing in. Links point to the original post; nothing is re-hosted. Who submitted is never shown.',
+  'about.evidenceTitle': 'Citizen evidence',
   'about.evidenceBody':
-    'National media alone is not a reliable sole source for ground truth. Watch citizen-submitted links (unverified, never re-hosted) by issue and state - then stand. Not a court of truth.',
+    'National media alone is not a reliable sole source for ground truth. Evidence clips are unverified citizen links - useful context before you stand, not a court of truth. Report anything that breaks the rules.',
   'about.countsTitle': 'What the counts mean - honestly',
   'about.counts1':
-    'Every number counts verified engaged citizens: people who signed in with Google and stood. One account, one stand per issue. Withdraw anytime.',
+    'Every number counts people who signed in and stood on that issue. One account, one stand per issue. Withdraw anytime.',
   'about.counts2':
     'Not a census, survey, or election. People who stand here chose to show up. That is already worth knowing.',
   'about.rulesTitle': 'Rules of the square',
@@ -232,10 +252,10 @@ const en = {
   'about.rule4': 'Standing is free and revocable by you alone.',
   'about.privacyTitle': 'Privacy - the honest version',
   'about.privacy1':
-    'Temporary mode: stands and reactions are tied to your Google login. The database can link account→issue. The public site still does not print your name unless you opt into the wall.',
+    'Temporary mode: stands and reactions are tied to your signed-in account. The database can link account→issue. The public site still does not print your name unless you opt into the wall.',
   'about.privacy2':
-    'Evidence is public for everyone; the submitter is never shown on the feed. Watching needs no login. Standing does.',
-  'about.verifyBlurb': 'Re-check public totals yourself:',
+    'Evidence is public for everyone; the submitter is never shown on the Feed. Watching needs no login. Standing and submitting do.',
+  'about.verifyBlurb': 'Re-check public totals yourself - no sign-in required:',
   'about.openSource': 'Open source',
   'about.openSourceBody': 'The entire codebase is public:',
   'dataRights.title': 'Your data & your rights',
@@ -250,7 +270,7 @@ const en = {
   'dataRights.agg': 'Only as aggregates / with wall opt-in',
   'dataRights.countsOnly': 'Public as counts only',
   'dataRights.wallPublic': 'First name + state only',
-  'dataRights.rowGoogle': 'Google account ID & email',
+  'dataRights.rowGoogle': 'Account ID & email',
   'dataRights.whyGoogle': 'Sign-in and one-account-one-stand',
   'dataRights.rowName': 'First name',
   'dataRights.whyName': 'Supporter wall & your citizen card',
@@ -307,7 +327,7 @@ const hi: Record<keyof typeof en, string> = {
   'counts.standing': 'नागरिक साथ खड़े हैं',
   'counts.taken': 'भारत भर में लिए गए पक्ष',
   'counts.today': 'आज',
-  'counts.verified': 'एक Google खाता, एक मुद्दे पर एक पक्ष। गिनती कितने दिखाती है - कौन नहीं।',
+  'counts.verified': 'एक खाता, एक मुद्दे पर एक पक्ष। गिनती कितने दिखाती है - कौन नहीं।',
   'stand.standWith': 'मैं इसके साथ हूँ',
   'stand.standing': 'आप इसके साथ खड़े हैं',
   'stand.share': 'साझा करें',
@@ -370,7 +390,7 @@ const hi: Record<keyof typeof en, string> = {
   'profile.saved': 'सहेजा गया',
   'profile.myStands': 'जिन मुद्दों के साथ आप खड़े हैं',
   'profile.none': 'आपने अभी तक कोई पक्ष नहीं लिया है।',
-  'profile.signInFirst': 'खड़े होने और अपना नागरिक कार्ड पाने के लिए Google से साइन इन करें।',
+  'profile.signInFirst': 'खड़े होने और अपना नागरिक कार्ड पाने के लिए साइन इन करें।',
   'profile.delete': 'मेरा खाता और डेटा मिटाएँ',
   'profile.deleteWarn':
     'इससे आपका खाता, प्रोफ़ाइल और आपके सभी पक्ष स्थायी रूप से हट जाएँगे। गिनती उसी अनुसार घटेगी। इसे वापस नहीं किया जा सकता।',
@@ -395,9 +415,26 @@ const hi: Record<keyof typeof en, string> = {
   'verify.run': 'अभी दोबारा गिनें',
   'verify.mine': 'आपके पक्ष',
   'verify.demo': 'डेमो मोड नमूना डेटा दिखाता है - वास्तविक पुनर्गणना के लिए लाइव इंस्टेंस जोड़ें।',
-  'verify.accountMode':
-    'खाता-जुड़ा मोड: सार्वजनिक गिनती दोबारा पढ़ें और इस Google खाते के पक्ष सूचीबद्ध करें।',
+  'verify.publicMode':
+    'यहाँ कोई भी सार्वजनिक पक्ष-गिनती दोबारा पढ़ सकता है - साइन इन ज़रूरी नहीं। योग खुले एग्रीगेट व्यू से आते हैं।',
+  'verify.mineHint': 'वैकल्पिक: इस खाते से किन मुद्दों पर आप खड़े हैं, देखने के लिए साइन इन करें।',
   'verify.mineNoneAccount': 'आपने इस खाते से अभी किसी मुद्दे पर पक्ष नहीं लिया।',
+  'ledger.title': 'सार्वजनिक रिकॉर्ड',
+  'ledger.sub':
+    'इस पक्ष का सार्वजनिक सत्यापन रिकॉर्ड। बिना साइन इन पढ़ें - ईमानदार गिनती जो कोई भी जाँच सकता है।',
+  'ledger.total': 'प्रकाशित कुल',
+  'ledger.today': 'आज जोड़े',
+  'ledger.rule':
+    'एक साइन-इन खाता, एक मुद्दे पर एक पक्ष। कभी भी वापस लें। गिनती कितने दिखाती है - कौन नहीं।',
+  'ledger.liveNote':
+    'सार्वजनिक stand_counts एग्रीगेट से लोड (anon-readable)। लॉगिन नहीं। Verify पर हर पक्ष जाँचें, या सार्वजनिक लॉग होने पर रेपो के चेकपॉइंट टूल खोलें।',
+  'ledger.demoNote':
+    'डेमो मोड - ये संख्याएँ नमूना डेटा हैं, लाइव सार्वजनिक लॉग नहीं। वास्तविक योग के लिए लाइव इंस्टेंस जोड़ें।',
+  'ledger.errorNote':
+    'अभी सार्वजनिक एग्रीगेट ताज़ा नहीं हो सका। ऊपर की संख्याएँ पेज कैश से हो सकती हैं - फिर कोशिश करें, या Verify खोलें।',
+  'ledger.refresh': 'सार्वजनिक रिकॉर्ड ताज़ा करें',
+  'ledger.verify': 'सभी पक्ष जाँचें',
+  'ledger.checkpoints': 'चेकपॉइंट टूल',
   'nav.feed': 'फ़ीड',
   'nav.add': 'फ़ीड में जोड़ें',
   'feed.title': 'भारत क्या देख रहा है',
@@ -495,15 +532,18 @@ const hi: Record<keyof typeof en, string> = {
   'about.title': 'भारत बोल के बारे में',
   'about.missionTitle': 'उद्देश्य',
   'about.mission1':
-    'भारत बोल एक राष्ट्रीय नागरिक चौक है। कोई भी भारतीय - किसी दल के साथ या बिना - किसी मुद्दे पर खड़ा हो और खुले में गिना जाए।',
+    'भारत बोल एक राष्ट्रीय नागरिक चौक है। फ़ीड देखें, नागरिक साक्ष्य देखें, और किसी मुद्दे पर खड़े हों - किसी दल के साथ या बिना - ताकि गिनती सार्वजनिक रहे।',
   'about.mission2':
-    'सार्वजनिक वादा: कितने साबित करें - और दीवारों/मानचित्र पर कौन न दिखाएँ (नाम केवल ऑप्ट-इन)।',
-  'about.evidenceTitle': 'नागरिक साक्ष्य क्यों',
+    'सार्वजनिक वादा: हर मुद्दे पर कितने खड़े हुए साबित करें - और दीवारों/मानचित्र पर कौन न दिखाएँ (नाम केवल ऑप्ट-इन)।',
+  'about.feedTitle': 'फ़ीड एक्सप्लोर',
+  'about.feedBody':
+    'फ़ीड से आप ज़मीन से साझा की गई चीज़ें मुद्दे और राज्य के अनुसार एक प्लेयर में देखते हैं। बिना साइन इन देखें। लिंक मूल पोस्ट पर जाते हैं; कुछ भी दोबारा होस्ट नहीं। जमा करने वाला कभी नहीं दिखता।',
+  'about.evidenceTitle': 'नागरिक साक्ष्य',
   'about.evidenceBody':
-    'राष्ट्रीय मीडिया अकेले ज़मीनी सच का भरोसेमंद स्रोत नहीं। यहाँ नागरिक लिंक (असत्यापित, कभी दोबारा होस्ट नहीं) मुद्दे/राज्य से देखें - फिर खड़े हों। यह अदालत नहीं।',
+    'राष्ट्रीय मीडिया अकेले ज़मीनी सच का भरोसेमंद स्रोत नहीं। साक्ष्य क्लिप असत्यापित नागरिक लिंक हैं - खड़े होने से पहले संदर्भ, अदालत नहीं। नियम तोड़ने वाली चीज़ रिपोर्ट करें।',
   'about.countsTitle': 'गिनती का ईमानदार अर्थ',
   'about.counts1':
-    'हर संख्या सत्यापित सक्रिय नागरिक गिनती है: Google से साइन इन कर पक्ष लिया। एक खाता, एक मुद्दा - एक पक्ष। वापस लिया जा सकता है।',
+    'हर संख्या उन लोगों की है जिन्होंने साइन इन कर उस मुद्दे पर पक्ष लिया। एक खाता, एक मुद्दा - एक पक्ष। वापस लिया जा सकता है।',
   'about.counts2':
     'यह जनगणना, सर्वे या चुनाव नहीं। यहाँ जो खड़े हुए उन्होंने चुना। इतना जानना भी काफ़ी है।',
   'about.rulesTitle': 'चौक के नियम',
@@ -513,10 +553,10 @@ const hi: Record<keyof typeof en, string> = {
   'about.rule4': 'खड़ा होना निःशुल्क है और केवल आप वापस ले सकते हैं।',
   'about.privacyTitle': 'गोपनीयता - ईमानदार संस्करण',
   'about.privacy1':
-    'अस्थायी मोड: पक्ष और प्रतिक्रियाएँ आपके Google लॉगिन से जुड़ी हैं। डेटाबेस खाता→मुद्दा जोड़ सकता है। सार्वजनिक साइट दीवार ऑप्ट-इन के बिना नाम नहीं छापती।',
+    'अस्थायी मोड: पक्ष और प्रतिक्रियाएँ आपके साइन-इन खाते से जुड़ी हैं। डेटाबेस खाता→मुद्दा जोड़ सकता है। सार्वजनिक साइट दीवार ऑप्ट-इन के बिना नाम नहीं छापती।',
   'about.privacy2':
-    'साक्ष्य सबके लिए खुले हैं; जमा करने वाला सार्वजनिक फ़ीड पर कभी नहीं दिखता। देखने के लिए लॉगिन नहीं। खड़े होने के लिए हाँ।',
-  'about.verifyBlurb': 'सार्वजनिक गिनती स्वयं जाँचें:',
+    'साक्ष्य सबके लिए खुले हैं; जमा करने वाला फ़ीड पर कभी नहीं दिखता। देखने के लिए लॉगिन नहीं। खड़े होने और जमा करने के लिए हाँ।',
+  'about.verifyBlurb': 'सार्वजनिक गिनती स्वयं जाँचें - साइन इन ज़रूरी नहीं:',
   'about.openSource': 'ओपन सोर्स',
   'about.openSourceBody': 'पूरा कोड सार्वजनिक है:',
   'dataRights.title': 'आपका डेटा और अधिकार',
@@ -530,7 +570,7 @@ const hi: Record<keyof typeof en, string> = {
   'dataRights.agg': 'केवल योग / दीवार ऑप्ट-इन के साथ',
   'dataRights.countsOnly': 'केवल गिनती के रूप में सार्वजनिक',
   'dataRights.wallPublic': 'केवल पहला नाम + राज्य',
-  'dataRights.rowGoogle': 'Google खाता ID और ईमेल',
+  'dataRights.rowGoogle': 'खाता ID और ईमेल',
   'dataRights.whyGoogle': 'साइन-इन और एक-खाता-एक-पक्ष',
   'dataRights.rowName': 'पहला नाम',
   'dataRights.whyName': 'समर्थक दीवार और नागरिक कार्ड',

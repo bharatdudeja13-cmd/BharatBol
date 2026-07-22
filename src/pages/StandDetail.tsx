@@ -8,13 +8,17 @@ import { SupporterWall } from '../components/SupporterWall';
 import { StateBars } from '../components/StateBars';
 import { EvidenceStrip } from '../components/EvidenceStrip';
 import { useEvidence } from '../state/useEvidence';
+import { usePublicStandLedger } from '../state/usePublicStandLedger';
 import { fmt } from '../lib/format';
+import { REPO_URL } from '../lib/supabase';
 
 export default function StandDetail() {
   const { id } = useParams<{ id: string }>();
   const { stands, counts, wall, breakdown, joined, requestStand, withdraw, setShareFor, loading } =
     useStands();
   const { t, lang } = useI18n();
+  const { record: publicLedger, status: ledgerStatus, refresh: refreshLedger } =
+    usePublicStandLedger(id);
 
   const stand = stands.find((s) => s.id === id);
   const { items: evidence } = useEvidence({ issue: stand?.category, limit: 24, enabled: !!stand });
@@ -39,9 +43,18 @@ export default function StandDetail() {
   }
 
   const c = counts[stand.id] ?? { total: 0, today: 0 };
+  /** Prefer anonymous public stand_counts; fall back to page counts in demo. */
+  const ledger = publicLedger ?? { total: c.total, today: c.today };
   const isJoined = joined.has(stand.id);
   const title = lang === 'hi' && stand.title_hi ? stand.title_hi : stand.title;
   const desc = lang === 'hi' && stand.description_hi ? stand.description_hi : stand.description;
+
+  const ledgerNote =
+    ledgerStatus === 'demo'
+      ? t('ledger.demoNote')
+      : ledgerStatus === 'error'
+        ? t('ledger.errorNote')
+        : t('ledger.liveNote');
 
   return (
     <div className="mx-auto max-w-3xl px-4 pt-10">
@@ -93,6 +106,55 @@ export default function StandDetail() {
         )}
         <p className="mt-4 text-[11px] text-sub font-mono">{t('counts.verified')}</p>
       </div>
+
+      {/* Public ledger - readable without signing in */}
+      <section className="mt-10" aria-labelledby="stand-ledger-heading">
+        <h2 id="stand-ledger-heading" className="font-display font-semibold text-xl">
+          {t('ledger.title')}
+        </h2>
+        <p className="text-sm text-sub mt-1 mb-4">{t('ledger.sub')}</p>
+        <div className="card p-5 sm:p-6 space-y-4">
+          <dl className="grid grid-cols-2 gap-4 text-center sm:text-left">
+            <div>
+              <dt className="text-xs font-mono uppercase tracking-wide text-sub">{t('ledger.total')}</dt>
+              <dd className="mt-1 font-display font-bold text-2xl text-navy tabular-nums">
+                {ledgerStatus === 'loading' ? '…' : fmt(ledger.total)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-mono uppercase tracking-wide text-sub">{t('ledger.today')}</dt>
+              <dd className="mt-1 font-display font-bold text-2xl text-navy tabular-nums">
+                {ledgerStatus === 'loading' ? '…' : fmt(ledger.today)}
+              </dd>
+            </div>
+          </dl>
+          <p className="text-sm text-sub leading-relaxed">{t('ledger.rule')}</p>
+          <p className="text-[11px] text-sub font-mono">{ledgerNote}</p>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+            {ledgerStatus !== 'demo' && (
+              <button
+                type="button"
+                className="text-navy underline underline-offset-4 font-medium"
+                onClick={() => void refreshLedger()}
+                disabled={ledgerStatus === 'loading'}
+              >
+                {ledgerStatus === 'loading' ? t('misc.loading') : t('ledger.refresh')}
+              </button>
+            )}
+            <Link to="/verify" className="text-navy underline underline-offset-4 font-medium">
+              {t('ledger.verify')} →
+            </Link>
+            <a
+              href={`${REPO_URL}/tree/develop/checkpoints`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-navy underline underline-offset-4"
+            >
+              {t('ledger.checkpoints')}
+            </a>
+          </div>
+        </div>
+      </section>
 
       {/* Evidences for this issue */}
       <section className="mt-10">
