@@ -127,12 +127,20 @@ export default function Home() {
                   {t('map.openStands')} · {stateEvidence.length} {t('map.evidenceCount')}
                 </p>
               </div>
-              <Link
-                to={evidenceWatchPath({ state: selState })}
-                className="btn-primary text-sm !py-2.5 !px-4 min-h-11"
-              >
-                {t('evidence.viewState')}
-              </Link>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  to={`/stands?state=${selState}`}
+                  className="btn-secondary text-sm !py-2.5 !px-4 min-h-11"
+                >
+                  {t('stands.browseState')}
+                </Link>
+                <Link
+                  to={evidenceWatchPath({ state: selState })}
+                  className="btn-primary text-sm !py-2.5 !px-4 min-h-11"
+                >
+                  {t('evidence.viewState')}
+                </Link>
+              </div>
             </div>
 
             <div>

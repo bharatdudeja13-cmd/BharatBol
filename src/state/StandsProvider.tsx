@@ -78,7 +78,12 @@ export function StandsProvider({ children }: { children: ReactNode }) {
       setNational(DEMO_NATIONAL);
       setWall(DEMO_WALL);
       setBreakdown(DEMO_BREAKDOWN);
-      setStandStates({ [DEMO_STANDS[0].id]: ['MH', 'DL'] });
+      // Demo: mix of national (untagged) + multi-state tags — never only one home state.
+      setStandStates({
+        [DEMO_STANDS[0].id]: ['MH', 'DL'],
+        [DEMO_STANDS[2].id]: ['KA'],
+        [DEMO_STANDS[4].id]: ['PB', 'HR', 'RJ'],
+      });
       setStandOfTheDayId(DEMO_STANDS[0].id);
       setLoading(false);
       return;

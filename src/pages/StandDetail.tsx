@@ -9,20 +9,32 @@ import { StateBars } from '../components/StateBars';
 import { EvidenceStrip } from '../components/EvidenceStrip';
 import { useEvidence } from '../state/useEvidence';
 import { fmt } from '../lib/format';
+import { stateName } from '../lib/states';
 
 export default function StandDetail() {
   const { id } = useParams<{ id: string }>();
-  const { stands, counts, wall, breakdown, joined, requestStand, withdraw, setShareFor, loading } =
-    useStands();
+  const {
+    stands,
+    counts,
+    wall,
+    breakdown,
+    standStates: relevanceByStand,
+    joined,
+    requestStand,
+    withdraw,
+    setShareFor,
+    loading,
+  } = useStands();
   const { t, lang } = useI18n();
 
   const stand = stands.find((s) => s.id === id);
   const { items: evidence } = useEvidence({ issue: stand?.category, limit: 24, enabled: !!stand });
   const standWall = useMemo(() => wall.filter((w) => w.stand_id === id), [wall, id]);
-  const standStates = useMemo(
+  const stateBreakdown = useMemo(
     () => breakdown.filter((r) => r.stand_id === id).map((r) => ({ state: r.state, count: r.count })),
     [breakdown, id]
   );
+  const relevanceTags = stand ? (relevanceByStand[stand.id] ?? []) : [];
 
   if (loading) {
     return <p className="mx-auto max-w-3xl px-4 pt-16 text-sub">{t('misc.loading')}</p>;
@@ -49,7 +61,7 @@ export default function StandDetail() {
         ← {t('stand.seeAll')}
       </Link>
 
-      <div className="mt-4 flex items-center gap-2 text-xs font-mono text-sub">
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-mono text-sub">
         <span className="inline-flex items-center gap-1.5 text-green">
           <span className="w-1.5 h-1.5 rounded-full bg-green animate-pulse" aria-hidden="true" />
           {t('stand.live')}
@@ -60,6 +72,26 @@ export default function StandDetail() {
 
       <h1 className="mt-3 font-display font-bold text-3xl sm:text-4xl leading-tight text-ink">{title}</h1>
       <p className="mt-2 font-mono text-sm font-semibold text-saffron">{hashtagBlock(stand)}</p>
+      <p className="mt-3 text-sm text-sub">
+        {relevanceTags.length === 0 ? (
+          <>
+            <span className="font-semibold text-navy">{t('stands.national')}</span>
+            <span className="text-sub"> — {t('stands.nationalHint')}</span>
+          </>
+        ) : (
+          <>
+            <span className="font-semibold text-saffron">{t('stands.relevantIn')}: </span>
+            {relevanceTags.map((code, i) => (
+              <span key={code}>
+                {i > 0 ? ' · ' : ''}
+                <Link to={`/stands?state=${code}`} className="text-navy underline underline-offset-4">
+                  {stateName(code, lang)}
+                </Link>
+              </span>
+            ))}
+          </>
+        )}
+      </p>
       <p className="mt-4 text-sub leading-relaxed">{desc}</p>
 
       {/* Big live counter + action */}
@@ -99,11 +131,11 @@ export default function StandDetail() {
         <EvidenceStrip items={evidence} issue={stand.category} />
       </section>
 
-      {/* State breakdown */}
-      {standStates.length > 0 && (
+      {/* State breakdown (who is standing — not relevance tags) */}
+      {stateBreakdown.length > 0 && (
         <section className="mt-10">
           <h2 className="font-display font-semibold text-xl mb-4">{t('map.title')}</h2>
-          <StateBars rows={standStates} />
+          <StateBars rows={stateBreakdown} />
         </section>
       )}
 

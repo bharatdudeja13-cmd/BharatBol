@@ -50,4 +50,13 @@ describe('phase7 geography + public counts', () => {
     expect(read('src/pages/Home.tsx')).toMatch(/openStands/);
     expect(read('src/pages/Home.tsx')).toMatch(/standStates/);
   });
+
+  it('Stands page segregates by stand_states for all states, not profile.state', () => {
+    const src = read('src/pages/Stands.tsx');
+    expect(src).toMatch(/standStates/);
+    expect(src).toMatch(/stands\.national/);
+    expect(src).toMatch(/taggedStateCodes/);
+    expect(src).not.toMatch(/profile\.state/);
+    expect(src).not.toMatch(/useAuth/);
+  });
 });
