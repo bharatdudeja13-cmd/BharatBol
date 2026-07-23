@@ -19,6 +19,7 @@
   "dependencies": {
     "@cloudflare/blindrsa-ts": "^0.4.4",
     "@supabase/supabase-js": "^2.47.10",
+    "@vercel/analytics": "^2.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.1"
