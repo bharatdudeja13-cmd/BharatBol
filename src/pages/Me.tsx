@@ -6,6 +6,7 @@ import { useI18n } from '../lib/i18n';
 import { STATES, stateName } from '../lib/states';
 import { isLive, SITE_URL } from '../lib/supabase';
 import { drawCitizenCard, shareCanvas, downloadCanvas } from '../lib/cards';
+import { standPath } from '../lib/standUrl';
 
 export default function Me() {
   const { session, profile, saveProfile, deleteAccount, signIn } = useAuth();
@@ -180,7 +181,7 @@ export default function Me() {
               {visibleStands.map((s) => (
                 <li key={s.id} className="p-4 flex items-center justify-between gap-4">
                   <Link
-                    to={`/stand/${s.id}`}
+                    to={standPath(s)}
                     className="font-medium text-sm hover:text-navy line-clamp-2 min-w-0"
                   >
                     {lang === 'hi' && s.title_hi ? s.title_hi : s.title}

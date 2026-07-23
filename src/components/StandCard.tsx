@@ -5,6 +5,7 @@ import { useI18n } from '../lib/i18n';
 import { LiveNumber } from './LiveNumber';
 import { fmt } from '../lib/format';
 import { stateName } from '../lib/states';
+import { standPath } from '../lib/standUrl';
 
 export function StandCard({ stand, compact = false }: { stand: Stand; compact?: boolean }) {
   const { counts, joined, requestStand, standStates } = useStands();
@@ -26,7 +27,7 @@ export function StandCard({ stand, compact = false }: { stand: Stand; compact?: 
         <span className="uppercase tracking-wide">{stand.category}</span>
       </div>
 
-      <Link to={`/stand/${stand.id}`} className="group">
+      <Link to={standPath(stand)} className="group">
         <h3 className={`font-display font-semibold leading-snug group-hover:text-navy ${compact ? 'text-base line-clamp-2' : 'text-lg'}`}>
           {title}
         </h3>

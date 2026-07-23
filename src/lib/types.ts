@@ -1,11 +1,16 @@
 export type Stand = {
   id: string;
+  /** Short public identifier for URLs and display. `id` remains the UUID key. */
+  public_id?: string | null;
   title: string;
   title_hi: string | null;
   description: string;
   description_hi: string | null;
   category: string;
   status: string;
+  source_label?: string | null;
+  source_url?: string | null;
+  source_published_on?: string | null;
   created_at: string;
 };
 

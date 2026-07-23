@@ -1,7 +1,6 @@
 /**
- * Vercel counterpart to worker/index.ts's Instagram poster route.
- * The React app always requests /api/ig-poster/:shortcode, so deployments
- * on either Vercel or Cloudflare can serve the same safe, same-origin image.
+ * Vercel Instagram poster endpoint. vercel.json rewrites
+ * /api/ig-poster/:shortcode here before the React SPA fallback runs.
  */
 type VercelRequest = { method?: string; query: { shortcode?: string | string[] } };
 type VercelResponse = {
@@ -20,11 +19,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'GET' && req.method !== 'HEAD') return res.status(405).end('Method not allowed');
 
-  const shortcode = Array.isArray(req.query.shortcode) ? req.query.shortcode[0] : req.query.shortcode;
-  if (!shortcode || !SHORTCODE.test(shortcode)) return res.status(404).end('Not found');
+  const value = Array.isArray(req.query.shortcode) ? req.query.shortcode[0] : req.query.shortcode;
+  if (!value || !SHORTCODE.test(value)) return res.status(404).end('Not found');
 
   try {
-    const upstream = await fetch(`https://www.instagram.com/p/${shortcode}/media/?size=l`, {
+    const upstream = await fetch(`https://www.instagram.com/p/${value}/media/?size=l`, {
       redirect: 'follow',
       headers: {
         'User-Agent':

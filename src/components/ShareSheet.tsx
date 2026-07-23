@@ -6,6 +6,7 @@ import { fmt } from '../lib/format';
 import { drawProofCard, shareCanvas, downloadCanvas, type CardFormat } from '../lib/cards';
 import { autoTag, hashtagBlock } from '../lib/campaign';
 import { SHARE_TEMPLATES, fillTemplate } from '../config/brand';
+import { standPath } from '../lib/standUrl';
 
 /**
  * The one-tap share package: card image (post or story format),
@@ -24,7 +25,7 @@ export function ShareSheet() {
 
   const count = shareFor ? counts[shareFor.id]?.total ?? 0 : 0;
   const title = shareFor ? (lang === 'hi' && shareFor.title_hi ? shareFor.title_hi : shareFor.title) : '';
-  const link = shareFor ? `${SITE_URL}/stand/${shareFor.id}` : SITE_URL;
+  const link = shareFor ? `${SITE_URL}${standPath(shareFor)}` : SITE_URL;
   const isJoined = shareFor ? joined.has(shareFor.id) : false;
 
   const vars = useMemo(

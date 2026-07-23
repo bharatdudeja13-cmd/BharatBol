@@ -13,9 +13,14 @@ import { EvidenceStrip } from '../components/EvidenceStrip';
 import { useEvidence, useEvidenceCount, evidenceWatchPath } from '../state/useEvidence';
 import { fmt } from '../lib/format';
 import { stateName } from '../lib/states';
+import { standPath } from '../lib/standUrl';
 import { PwaInstallButton } from '../components/PwaInstallButton';
 import { deriveOpenIssues } from '../lib/openIssues';
-import { STATE_LEADERSHIP } from '../config/stateLeadership';
+import {
+  LEADERSHIP_VERIFIED_ON,
+  OFFICIAL_LEADERSHIP_DIRECTORY_URL,
+  STATE_LEADERSHIP,
+} from '../config/stateLeadership';
 
 export default function Home() {
   const { stands, counts, national, wall, breakdown, standStates, standOfTheDayId, loading } =
@@ -134,7 +139,7 @@ export default function Home() {
             {addedToday.slice(0, 3).map((s) => (
               <Link
                 key={s.id}
-                to={`/stand/${s.id}`}
+                to={standPath(s)}
                 className="inline-flex max-w-full rounded-full border border-line bg-bg px-3 py-1.5 text-xs font-semibold text-navy hover:border-navy/40 truncate"
               >
                 {lang === 'hi' && s.title_hi ? s.title_hi : s.title}
@@ -228,6 +233,18 @@ export default function Home() {
                   {leadership.designation}: {leadership.name}
                 </p>
                 <p className="text-sm text-sub">{leadership.party}</p>
+                <p className="text-xs text-sub">
+                  Office-holder verified {LEADERSHIP_VERIFIED_ON} against the official{' '}
+                  <a
+                    href={OFFICIAL_LEADERSHIP_DIRECTORY_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium text-navy underline underline-offset-4"
+                  >
+                    government directory
+                  </a>
+                  .
+                </p>
                 <p className="text-sm text-sub">
                   Published grievance contact:{' '}
                   <a href={`mailto:${leadership.grievanceEmail}`} className="font-medium text-navy underline underline-offset-4 break-all">
@@ -259,7 +276,7 @@ export default function Home() {
                   {openStands.map((stand) => (
                     <li key={stand.id}>
                       <Link
-                        to={`/stand/${stand.id}`}
+                        to={standPath(stand)}
                         className="flex items-center justify-between gap-4 py-3.5 min-h-12 hover:text-navy"
                       >
                         <span className="text-sm font-medium">
