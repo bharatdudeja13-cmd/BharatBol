@@ -8,10 +8,21 @@ import { BRAND } from '../config/brand';
 
 const CURATED: [RegExp, string][] = [
   [/NEET|CBSE/i, 'ExamAudit'],
-  [/audit reports/i, 'OpenAudits'],
+  [/exam-process audits/i, 'ExamAudit'],
+  [/audit reports|audit findings/i, 'OpenAudits'],
   [/teaching posts/i, 'FillTeacherPosts'],
-  [/integrity of every vote/i, 'EveryVoteSafe'],
-  [/unemployment/i, 'YouthJobs'],
+  [/integrity of every vote|vote cast is counted/i, 'EveryVoteSafe'],
+  [/unemployment|youth employment/i, 'YouthJobs'],
+  [/essential medicines/i, 'MedicineStock'],
+  [/air quality monitors/i, 'OpenAQI'],
+  [/AQI health-action/i, 'AQIAction'],
+  [/groundwater/i, 'GroundWater'],
+  [/flood-embankment/i, 'FloodBunds'],
+  [/suburban rail/i, 'SuburbanRail'],
+  [/tanker-dependency|water-storage/i, 'CityWater'],
+  [/Landslide early-warning/i, 'LandslideWarn'],
+  [/cyclone-shelter/i, 'CycloneShelters'],
+  [/drainage-capacity/i, 'DrainAudit'],
 ];
 
 const STOPWORDS = new Set([
