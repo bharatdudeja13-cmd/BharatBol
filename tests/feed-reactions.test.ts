@@ -30,8 +30,8 @@ describe('account-linked feed reactions', () => {
     expect(sql).toMatch(/from public\.feed_item_reactions/);
   });
 
-  it('EvidencePlayer uses account upsert, not blind react-issue', () => {
-    const src = read('src/pages/EvidencePlayer.tsx');
+  it('Feed uses account upsert, not blind react-issue', () => {
+    const src = read('src/pages/Feed.tsx');
     expect(src).toMatch(/feed_item_reactions/);
     expect(src).not.toMatch(/react-issue/);
     expect(src).not.toMatch(/blindForReact/);

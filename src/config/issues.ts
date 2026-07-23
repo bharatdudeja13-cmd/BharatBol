@@ -30,7 +30,7 @@ export const ISSUES: Issue[] = [
 
 const BY_SLUG = new Map(ISSUES.map((i) => [i.slug, i]));
 
-export function issueLabel(slug: string, lang: 'en' | 'hi' = 'en'): string {
+export function issueLabel(slug: string, lang: string = 'en'): string {
   const i = BY_SLUG.get(slug as IssueSlug);
   if (!i) return slug;
   return lang === 'hi' ? i.hi : i.en;

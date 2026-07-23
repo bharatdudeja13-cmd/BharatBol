@@ -21,7 +21,6 @@ import Feed from './pages/Feed';
 import AddToFeed from './pages/AddToFeed';
 import Moderation from './pages/Moderation';
 import Admin from './pages/Admin';
-import EvidencePlayer from './pages/EvidencePlayer';
 import { configError } from './lib/supabase';
 
 /** Deployed with no backend config: a clear failure, never silent demo data. */
@@ -68,14 +67,25 @@ function JoinErrorToast() {
   );
 }
 
+/** Space for mobile BottomNav so Feed reels never cover it. */
+const NAV_PAD = 'pb-[calc(3.25rem+env(safe-area-inset-bottom))] md:pb-8';
+
+/** Preserve deep links from the retired /evidence route. */
+function EvidenceRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/feed${search}`} replace />;
+}
+
 function Shell() {
-  const { pathname } = useLocation();
-  const immersive = pathname.startsWith('/evidence');
+  const { pathname, search } = useLocation();
+  const watching = pathname.startsWith('/feed') && new URLSearchParams(search).has('id');
+  // Gallery keeps site chrome; only the reel player is immersive.
+  const immersive = watching;
 
   return (
     <div className="min-h-screen flex flex-col">
       {!immersive && <Header />}
-      <main className={immersive ? 'flex-1' : 'flex-1 pb-24 md:pb-8'}>
+      <main className={`flex-1 ${immersive ? `min-h-0 ${NAV_PAD}` : NAV_PAD}`}>
         <ErrorBoundary>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -87,7 +97,7 @@ function Shell() {
             <Route path="/verify" element={<Verify />} />
             <Route path="/feed" element={<Feed />} />
             <Route path="/add" element={<AddToFeed />} />
-            <Route path="/evidence" element={<EvidencePlayer />} />
+            <Route path="/evidence" element={<EvidenceRedirect />} />
             <Route path="/moderation" element={<Moderation />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="*" element={<Navigate to="/" replace />} />
@@ -95,7 +105,7 @@ function Shell() {
         </ErrorBoundary>
       </main>
       {!immersive && <Footer />}
-      {!immersive && <BottomNav />}
+      <BottomNav />
     </div>
   );
 }

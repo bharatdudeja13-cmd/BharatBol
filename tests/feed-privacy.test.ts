@@ -113,16 +113,20 @@ describe('link + embed, never re-host', () => {
     expect(body).toMatch(/thumbnail_url\s+text/);
   });
 
-  it('metadata comes from official oEmbed endpoints only (no scraping)', () => {
+  it('metadata comes from official public endpoints only (no HTML scraping)', () => {
     const src = read('supabase/functions/feed-submit/index.ts');
     const fetches = [...src.matchAll(/fetch\(\s*`([^`]+)`/g)].map((m) => m[1]);
+    expect(fetches.length).toBeGreaterThan(0);
     for (const f of fetches) {
-      expect(f).toMatch(/oembed/i);
+      expect(f).toMatch(/oembed|instagram\.com\/p\/\$\{id\}\/media/i);
     }
+    // Instagram previews must work without INSTAGRAM_OEMBED_TOKEN.
+    expect(src).toMatch(/instagram\.com\/p\/\$\{id\}\/media\/\?size=l/);
+    expect(src).toMatch(/graph\.facebook\.com\/v25\.0\/instagram_oembed/);
   });
 
-  it('YouTube embeds use the privacy-enhanced host in the shared player', () => {
-    const src = read('src/pages/EvidencePlayer.tsx');
+  it('YouTube embeds use the privacy-enhanced host in the Feed player', () => {
+    const src = read('src/pages/Feed.tsx');
     expect(src).toMatch(/youtube-nocookie\.com/);
     expect(read('src/components/FeedCard.tsx')).toMatch(/evidenceWatchPath/);
   });

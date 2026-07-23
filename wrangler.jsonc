@@ -15,9 +15,9 @@
     "binding": "ASSETS",
     // Client-side routes (/stands, /verify, /me …) resolve to index.html.
     "not_found_handling": "single-page-application",
-    // Only per-stand URLs reach the Worker — everything else is served
-    // straight from the CDN, which is what keeps reads free at scale.
-    "run_worker_first": ["/stand/*"]
+    // Stand OG + Instagram poster proxy hit the Worker; everything else
+    // is served straight from the CDN (keeps reads free at scale).
+    "run_worker_first": ["/stand/*", "/api/ig-poster/*"]
   },
   "vars": {
     // Public by design: both values are already inlined into the client

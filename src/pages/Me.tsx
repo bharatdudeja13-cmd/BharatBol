@@ -20,6 +20,7 @@ export default function Me() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [cardUrl, setCardUrl] = useState('');
   const [cardCanvas, setCardCanvas] = useState<HTMLCanvasElement | null>(null);
+  const [showAllStands, setShowAllStands] = useState(false);
 
   useEffect(() => {
     setName(profile?.first_name ?? '');
@@ -28,6 +29,9 @@ export default function Me() {
   }, [profile]);
 
   const myStands = stands.filter((s) => joined.has(s.id));
+  const STAND_PREVIEW = 5;
+  const visibleStands = showAllStands ? myStands : myStands.slice(0, STAND_PREVIEW);
+  const hiddenStandCount = Math.max(0, myStands.length - STAND_PREVIEW);
 
   useEffect(() => {
     const first = profile?.first_name || name;
@@ -171,21 +175,38 @@ export default function Me() {
             </Link>
           </p>
         ) : (
-          <ul className="mt-4 space-y-3">
-            {myStands.map((s) => (
-              <li key={s.id} className="card p-4 flex items-center justify-between gap-4">
-                <Link to={`/stand/${s.id}`} className="font-medium text-sm hover:text-navy">
-                  {lang === 'hi' && s.title_hi ? s.title_hi : s.title}
-                </Link>
-                <button
-                  className="text-xs text-sub underline underline-offset-4 hover:text-navy shrink-0"
-                  onClick={() => void withdraw(s.id)}
-                >
-                  {t('stand.withdraw')}
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-4 card overflow-hidden">
+            <ul className="divide-y divide-line max-h-[22rem] overflow-y-auto">
+              {visibleStands.map((s) => (
+                <li key={s.id} className="p-4 flex items-center justify-between gap-4">
+                  <Link
+                    to={`/stand/${s.id}`}
+                    className="font-medium text-sm hover:text-navy line-clamp-2 min-w-0"
+                  >
+                    {lang === 'hi' && s.title_hi ? s.title_hi : s.title}
+                  </Link>
+                  <button
+                    className="text-xs text-sub underline underline-offset-4 hover:text-navy shrink-0"
+                    onClick={() => void withdraw(s.id)}
+                  >
+                    {t('stand.withdraw')}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {hiddenStandCount > 0 && (
+              <button
+                type="button"
+                className="w-full border-t border-line px-4 py-3 text-sm font-semibold text-navy hover:bg-faint"
+                onClick={() => setShowAllStands((v) => !v)}
+              >
+                {showAllStands
+                  ? t('citizen.showLess')
+                  : t('citizen.andMore').replace('{n}', String(hiddenStandCount))}
+                {!showAllStands ? ` · ${t('citizen.showAll')}` : ''}
+              </button>
+            )}
+          </div>
         )}
       </section>
 

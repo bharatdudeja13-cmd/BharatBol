@@ -1,6 +1,13 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  detectBrowserLang,
+  isLangCode,
+  LANG_STORAGE_KEY,
+  type LangCode,
+} from '../config/languages';
 
-export type Lang = 'en' | 'hi';
+/** UI language code (scheduled Indian languages + English). */
+export type Lang = LangCode;
 
 const en = {
   'app.name': 'BharatBol',
@@ -11,12 +18,15 @@ const en = {
     'When the news skips your ground truth, speak here. Stand on the issue. Be one of the many - never the named target on the wall unless you choose.',
   'nav.home': 'Home',
   'nav.stands': 'Stands',
+  'nav.feed': 'Feed',
   'nav.watch': 'Watch',
   'nav.addShort': 'Add',
   'nav.about': 'About',
   'nav.profile': 'Me',
   'nav.signIn': 'Sign in',
   'nav.signOut': 'Sign out',
+  'lang.choose': 'Language',
+  'lang.fallbackNote': 'Full translations for Hindi and English. Other languages fall back to English until ready.',
   'hero.ctaStand': 'Take a stand',
   'hero.ctaAbout': 'Why this exists',
   'counts.standing': 'citizens standing',
@@ -30,6 +40,17 @@ const en = {
   'stand.live': 'Live',
   'stand.seeAll': 'See all stands',
   'stand.notFound': 'This stand could not be found.',
+  'stands.browseState': 'Browse stands for this state',
+  'stands.sub': 'Open issues that need a public stand - All India and state-tagged.',
+  'stands.all': 'All',
+  'stands.national': 'All India',
+  'stands.nationalHint': 'Open nationwide - not tagged to a single state.',
+  'stands.stateHint': 'Tagged to this state.',
+  'stands.emptyFilter': 'No stands in this group yet.',
+  'stands.emptySearch': 'No stands match that search.',
+  'stands.filterLabel': 'Filter stands by geography',
+  'stands.search': 'Search stands',
+  'stands.searchPlaceholder': 'Search by title or issue…',
   'wall.title': 'Citizens standing',
   'wall.sub': 'First name and state only - shown with their permission.',
   'wall.empty': 'Be the first name on this wall.',
@@ -44,6 +65,20 @@ const en = {
   'map.especially': 'Especially here',
   'map.evidenceCount': 'clips',
   'home.standOfDay': 'Today’s open stand',
+  'home.dailyPulseTitle': 'Open issues, added daily',
+  'home.dailyPulseSub':
+    'State and national issues that need a public stand are identified and opened here every day.',
+  'home.openTotal': 'Open now',
+  'home.addedToday': 'Added today',
+  'home.seeAllStands': 'See all stands',
+  'home.issuesMapTitle': 'Where issues are open',
+  'home.issuesMapSub':
+    'Shaded by how many open stands are tagged to each state. All India issues stay national - not painted on every tile.',
+  'home.issuesLegendLow': 'fewer open issues',
+  'home.issuesLegendHigh': 'more open issues',
+  'home.allIndiaOpen': 'All India open',
+  'home.issuesInState': 'open issues here',
+  'home.evidenceCount': 'citizen evidence clips live',
   'pwa.nudgeTitle': 'Add BharatBol to your home screen',
   'pwa.nudgeBody': 'Stand and share evidence in two taps, like an app, without the store.',
   'pwa.nudgeCta': 'How to install',
@@ -77,6 +112,9 @@ const en = {
   'campaign.line': 'Bharat bol raha hai - add your voice.',
   'citizen.title': 'Your citizen card',
   'citizen.standsWith': 'stands with India',
+  'citizen.andMore': 'and {n} more',
+  'citizen.showAll': 'Show all stands',
+  'citizen.showLess': 'Show less',
   'profile.title': 'Your profile',
   'profile.firstName': 'First name',
   'profile.state': 'State',
@@ -139,12 +177,13 @@ const en = {
   'ledger.refresh': 'Refresh public record',
   'ledger.verify': 'Verify all stands',
   'ledger.checkpoints': 'Checkpoint tools',
-  'nav.feed': 'Feed',
   'nav.add': 'Add to feed',
   'feed.title': 'What India is seeing',
   'feed.sub':
-    'Citizen evidence by issue and state. Watch without signing in - same player everywhere. Nothing is re-hosted. Who submitted is never shown.',
-  'feed.empty': 'Nothing here yet. Add the first post.',
+    'Citizen evidence by issue and state. Watch without signing in - swipe like reels. Nothing is re-hosted. Who submitted is never shown.',
+  'feed.subShort': 'Tap a clip to watch. Swipe when you are in the player.',
+  'feed.backToGallery': 'Back to gallery',
+  'feed.empty': 'Nothing here yet. Add the first public reel or post.',
   'feed.allIssues': 'All issues',
   'feed.allStates': 'All states',
   'feed.unverified': 'Unverified - links to the original',
@@ -155,6 +194,8 @@ const en = {
   'feed.reportSub': 'A reported item leaves the public feed until a human reviews it again. You do not need an account, and nothing about you is stored.',
   'feed.reportSent': 'Reported - a moderator will review it.',
   'feed.loop': 'You have seen it - now stand.',
+  'feed.submitEvidence': 'Submit evidence',
+  'feed.submitHint': 'Instagram, YouTube Shorts, X - paste any public reel or post link.',
   'add.title': 'Add to the feed',
   'add.sub': 'Saw something the headlines missed? Paste a public link. We never re-host the video - we only point to the original.',
   'add.paste': 'Paste the link',
@@ -194,17 +235,18 @@ const en = {
   'evidence.title': 'Evidences',
   'evidence.sub': 'Citizen-submitted clips - unverified, public. Tap to watch. No login required to watch.',
   'evidence.empty': 'No evidence here yet. Add a public reel or post - it will be visible to everyone.',
-  'evidence.watchAll': 'Watch',
-  'evidence.viewState': 'Watch evidence from this state',
+  'evidence.watchAll': 'Open in Feed',
+  'evidence.viewState': 'See evidence from this state',
   'evidence.useful': 'Useful',
   'evidence.notUseful': 'Not useful',
   'evidence.reactHonest':
     'Watching is open to everyone. Useful / Not useful needs sign-in and never shows who.',
   'evidence.nowStand': 'Now stand',
+  'evidence.iStoodUp': 'I stood up',
   'evidence.openOriginal': 'Open original',
   'evidence.mute': 'Sound on',
   'evidence.unmute': 'Muted',
-  'evidence.browseSub': 'Clips grouped by open stands. Tap a clip to watch in sequence.',
+  'evidence.browseSub': 'Clips grouped by open stands. Tap a clip to watch in Feed.',
   'evidence.clipCount': 'clips',
   'evidence.swipeHint': 'Swipe up for next',
   'mod.title': 'Moderation queue',
@@ -325,12 +367,15 @@ const hi: Record<keyof typeof en, string> = {
     'जब समाचार आपकी ज़मीनी सच्चाई छोड़ दे, यहाँ बोलें। मुद्दे पर खड़े हों। भीड़ में एक - दीवार पर नाम तभी जब आप चाहें।',
   'nav.home': 'होम',
   'nav.stands': 'मुद्दे',
+  'nav.feed': 'फ़ीड',
   'nav.watch': 'देखें',
   'nav.addShort': 'जोड़ें',
   'nav.about': 'परिचय',
   'nav.profile': 'मैं',
   'nav.signIn': 'साइन इन',
   'nav.signOut': 'साइन आउट',
+  'lang.choose': 'भाषा',
+  'lang.fallbackNote': 'पूर्ण अनुवाद हिन्दी और अंग्रेज़ी में। अन्य भाषाएँ तैयार होने तक अंग्रेज़ी दिखाएँगी।',
   'hero.ctaStand': 'अपना पक्ष रखें',
   'hero.ctaAbout': 'यह क्यों है',
   'counts.standing': 'नागरिक साथ खड़े हैं',
@@ -344,6 +389,17 @@ const hi: Record<keyof typeof en, string> = {
   'stand.live': 'लाइव',
   'stand.seeAll': 'सभी मुद्दे देखें',
   'stand.notFound': 'यह मुद्दा नहीं मिला।',
+  'stands.browseState': 'इस राज्य के पक्ष देखें',
+  'stands.sub': 'सार्वजनिक पक्ष वाले खुले मुद्दे - अखिल भारत और राज्य-टैग।',
+  'stands.all': 'सभी',
+  'stands.national': 'पूरा भारत',
+  'stands.nationalHint': 'देशभर में खुला - किसी एक राज्य से जुड़ा नहीं।',
+  'stands.stateHint': 'इस राज्य से जुड़ा।',
+  'stands.emptyFilter': 'इस समूह में अभी कोई पक्ष नहीं।',
+  'stands.emptySearch': 'इस खोज से कोई पक्ष नहीं मिला।',
+  'stands.filterLabel': 'भूगोल से पक्ष छाँटें',
+  'stands.search': 'पक्ष खोजें',
+  'stands.searchPlaceholder': 'शीर्षक या मुद्दे से खोजें…',
   'wall.title': 'साथ खड़े नागरिक',
   'wall.sub': 'सिर्फ़ पहला नाम और राज्य - उनकी अनुमति से।',
   'wall.empty': 'इस दीवार पर पहला नाम आपका हो।',
@@ -358,6 +414,20 @@ const hi: Record<keyof typeof en, string> = {
   'map.especially': 'यहाँ ख़ास',
   'map.evidenceCount': 'क्लिप',
   'home.standOfDay': 'आज का खुला पक्ष',
+  'home.dailyPulseTitle': 'खुले मुद्दे, हर दिन जुड़ते हैं',
+  'home.dailyPulseSub':
+    'जिन राज्य और राष्ट्रीय मुद्दों पर सार्वजनिक पक्ष चाहिए, उन्हें यहाँ हर दिन पहचाना और खोला जाता है।',
+  'home.openTotal': 'अभी खुले',
+  'home.addedToday': 'आज जुड़े',
+  'home.seeAllStands': 'सभी पक्ष देखें',
+  'home.issuesMapTitle': 'मुद्दे कहाँ खुले हैं',
+  'home.issuesMapSub':
+    'रंग प्रत्येक राज्य से जुड़े खुले पक्षों की संख्या दिखाता है। अखिल भारत मुद्दे राष्ट्रीय रहते हैं - हर टाइल पर नहीं।',
+  'home.issuesLegendLow': 'कम खुले मुद्दे',
+  'home.issuesLegendHigh': 'अधिक खुले मुद्दे',
+  'home.allIndiaOpen': 'अखिल भारत खुले',
+  'home.issuesInState': 'यहाँ खुले मुद्दे',
+  'home.evidenceCount': 'नागरिक साक्ष्य क्लिप लाइव',
   'pwa.nudgeTitle': 'BharatBol होम स्क्रीन पर जोड़ें',
   'pwa.nudgeBody': 'दो टैप में खड़े हों और साक्ष्य साझा करें - स्टोर के बिना ऐप जैसा।',
   'pwa.nudgeCta': 'इंस्टॉल कैसे करें',
@@ -391,6 +461,9 @@ const hi: Record<keyof typeof en, string> = {
   'campaign.line': 'भारत बोल रहा है - अपनी आवाज़ जोड़िए।',
   'citizen.title': 'आपका नागरिक कार्ड',
   'citizen.standsWith': 'भारत के साथ खड़े हैं',
+  'citizen.andMore': 'और {n} अन्य',
+  'citizen.showAll': 'सभी पक्ष दिखाएँ',
+  'citizen.showLess': 'कम दिखाएँ',
   'profile.title': 'आपकी प्रोफ़ाइल',
   'profile.firstName': 'पहला नाम',
   'profile.state': 'राज्य',
@@ -453,11 +526,12 @@ const hi: Record<keyof typeof en, string> = {
   'ledger.refresh': 'सार्वजनिक रिकॉर्ड ताज़ा करें',
   'ledger.verify': 'सभी पक्ष जाँचें',
   'ledger.checkpoints': 'चेकपॉइंट टूल',
-  'nav.feed': 'फ़ीड',
   'nav.add': 'फ़ीड में जोड़ें',
   'feed.title': 'भारत क्या देख रहा है',
-  'feed.sub': 'नागरिक साक्ष्य - मुद्दे और राज्य के अनुसार। बिना साइन इन देखें। कुछ भी दोबारा होस्ट नहीं।',
-  'feed.empty': 'अभी यहाँ कुछ नहीं है। पहला पोस्ट जोड़ें।',
+  'feed.sub': 'नागरिक साक्ष्य - मुद्दे और राज्य के अनुसार। बिना साइन इन स्वाइप करके देखें। कुछ भी दोबारा होस्ट नहीं।',
+  'feed.subShort': 'देखने के लिए क्लिप पर टैप करें। प्लेयर में स्वाइप करें।',
+  'feed.backToGallery': 'गैलरी पर वापस',
+  'feed.empty': 'अभी यहाँ कुछ नहीं है। पहली सार्वजनिक रील या पोस्ट जोड़ें।',
   'feed.allIssues': 'सभी मुद्दे',
   'feed.allStates': 'सभी राज्य',
   'feed.unverified': 'असत्यापित - मूल पोस्ट का लिंक',
@@ -468,6 +542,8 @@ const hi: Record<keyof typeof en, string> = {
   'feed.reportSub': 'रिपोर्ट की गई सामग्री तब तक सार्वजनिक फ़ीड से हट जाती है जब तक कोई व्यक्ति दोबारा जाँच न कर ले। खाता ज़रूरी नहीं।',
   'feed.reportSent': 'रिपोर्ट दर्ज - समीक्षा की जाएगी।',
   'feed.loop': 'आपने देखा - अब साथ खड़े हों।',
+  'feed.submitEvidence': 'साक्ष्य जोड़ें',
+  'feed.submitHint': 'इंस्टाग्राम, यूट्यूब शॉर्ट्स, X - कोई भी सार्वजनिक रील या पोस्ट लिंक चिपकाएँ।',
   'add.title': 'फ़ीड में जोड़ें',
   'add.sub': 'हेडलाइन ने जो छोड़ा - सार्वजनिक लिंक चिपकाएँ। वीडियो दोबारा होस्ट नहीं; केवल मूल की ओर इशारा।',
   'add.paste': 'लिंक चिपकाएँ',
@@ -507,16 +583,17 @@ const hi: Record<keyof typeof en, string> = {
   'evidence.title': 'साक्ष्य',
   'evidence.sub': 'नागरिक क्लिप - असत्यापित। बिना लॉगिन देखें।',
   'evidence.empty': 'यहाँ अभी साक्ष्य नहीं। सार्वजनिक रील या पोस्ट जोड़ें।',
-  'evidence.watchAll': 'देखें',
+  'evidence.watchAll': 'फ़ीड में खोलें',
   'evidence.viewState': 'इस राज्य के साक्ष्य देखें',
   'evidence.useful': 'उपयोगी',
   'evidence.notUseful': 'उपयोगी नहीं',
   'evidence.reactHonest': 'देखना सबके लिए खुला। उपयोगी चिह्न लॉगिन के बाद - कभी नहीं दिखाता कि कौन।',
   'evidence.nowStand': 'अब खड़े हों',
+  'evidence.iStoodUp': 'मैं खड़ा हो चुका',
   'evidence.openOriginal': 'मूल खोलें',
   'evidence.mute': 'आवाज़ चालू',
   'evidence.unmute': 'मूक',
-  'evidence.browseSub': 'खुले पक्षों के अनुसार क्लिप। क्रम से देखने के लिए टैप करें।',
+  'evidence.browseSub': 'खुले पक्षों के अनुसार क्लिप। फ़ीड में देखने के लिए टैप करें।',
   'evidence.clipCount': 'क्लिप',
   'evidence.swipeHint': 'अगले के लिए ऊपर स्वाइप करें',
   'mod.title': 'समीक्षा कतार',
@@ -623,7 +700,7 @@ const hi: Record<keyof typeof en, string> = {
   'misc.error': 'कुछ गड़बड़ हुई। कृपया फिर प्रयास करें।',
 };
 
-const DICTS: Record<Lang, Record<string, string>> = { en, hi };
+const DICTS: Partial<Record<Lang, Record<string, string>>> = { en, hi };
 
 type I18n = {
   lang: Lang;
@@ -631,21 +708,51 @@ type I18n = {
   t: (key: keyof typeof en) => string;
 };
 
+function readStoredLang(): Lang | null {
+  try {
+    const raw = localStorage.getItem(LANG_STORAGE_KEY);
+    return isLangCode(raw) ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+function initialLang(): Lang {
+  return readStoredLang() ?? detectBrowserLang();
+}
+
 const Ctx = createContext<I18n>({ lang: 'en', setLang: () => {}, t: (k) => en[k] });
 
 export function LangProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>(() =>
-    localStorage.getItem('bharatbol:lang') === 'hi' ? 'hi' : 'en'
-  );
+  const [lang, setLangState] = useState<Lang>(() => initialLang());
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
   const setLang = useCallback((l: Lang) => {
-    setLangState(l);
-    localStorage.setItem('bharatbol:lang', l);
-    document.documentElement.lang = l;
+    if (!isLangCode(l)) return;
+    setLangState((prev) => (prev === l ? prev : l));
+    try {
+      localStorage.setItem(LANG_STORAGE_KEY, l);
+    } catch {
+      /* ignore quota / private mode */
+    }
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = l;
+    }
   }, []);
+
   const t = useCallback(
-    (key: keyof typeof en) => DICTS[lang][key] ?? en[key],
+    (key: keyof typeof en) => {
+      const dict = DICTS[lang];
+      const fromLang = dict?.[key];
+      if (typeof fromLang === 'string' && fromLang.length > 0) return fromLang;
+      return en[key];
+    },
     [lang]
   );
+
   const value = useMemo(() => ({ lang, setLang, t }), [lang, setLang, t]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
