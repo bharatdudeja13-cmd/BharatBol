@@ -15,6 +15,7 @@ import { fmt } from '../lib/format';
 import { stateName } from '../lib/states';
 import { PwaInstallButton } from '../components/PwaInstallButton';
 import { deriveOpenIssues } from '../lib/openIssues';
+import { STATE_LEADERSHIP } from '../config/stateLeadership';
 
 export default function Home() {
   const { stands, counts, national, wall, breakdown, standStates, standOfTheDayId, loading } =
@@ -69,6 +70,7 @@ export default function Home() {
       : 0;
 
   const issuesHere = selState ? (issuesByState[selState] ?? 0) : 0;
+  const leadership = selState ? STATE_LEADERSHIP[selState] : null;
 
   return (
     <div className="mx-auto max-w-5xl px-4">
@@ -145,6 +147,20 @@ export default function Home() {
         )}
       </section>
 
+      <section className="mb-10 rounded-3xl border border-navy/15 bg-navy text-white px-5 py-6 sm:px-7">
+        <p className="text-xs font-mono uppercase tracking-widest text-saffron">Monthly public record</p>
+        <h2 className="mt-2 font-display text-2xl font-semibold">A state-wise open-issues report, every last Friday.</h2>
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-white/80">
+          Each report will list open issues tagged to a state, the number of people standing,
+          and the public ledger records behind those totals. It gives the relevant state office
+          a clear public task list. Whether an office responds or acts is its choice.
+        </p>
+        <p className="mt-3 text-xs leading-relaxed text-white/60">
+          Report generation and delivery are not enabled yet. Contacts shown after selecting a
+          state are published grievance contacts and will be rechecked before any report is sent.
+        </p>
+      </section>
+
       {featured && (
         <section className="mb-10">
           <p className="text-xs font-mono uppercase tracking-widest text-saffron mb-2">
@@ -205,6 +221,35 @@ export default function Home() {
               </div>
             </div>
 
+            {leadership && (
+              <section className="rounded-2xl border border-line bg-faint p-4 space-y-2" aria-label="Public office contact">
+                <p className="text-xs font-mono uppercase tracking-wide text-sub">Public office contact</p>
+                <p className="font-semibold text-navy">
+                  {leadership.designation}: {leadership.name}
+                </p>
+                <p className="text-sm text-sub">{leadership.party}</p>
+                <p className="text-sm text-sub">
+                  Published grievance contact:{' '}
+                  <a href={`mailto:${leadership.grievanceEmail}`} className="font-medium text-navy underline underline-offset-4 break-all">
+                    {leadership.grievanceEmail}
+                  </a>
+                </p>
+                <p className="text-xs text-sub leading-relaxed">
+                  This contact is shown for the future monthly report. For an individual grievance,
+                  use the official{' '}
+                  <a
+                    href="https://pgportal.gov.in/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium text-navy underline underline-offset-4"
+                  >
+                    CPGRAMS portal
+                  </a>
+                  . BharatBol does not send reports yet.
+                </p>
+              </section>
+            )}
+
             <div>
               <h4 className="text-sm font-semibold text-navy mb-2">{t('map.openStandsTitle')}</h4>
               {openStands.length === 0 ? (
@@ -219,6 +264,15 @@ export default function Home() {
                       >
                         <span className="text-sm font-medium">
                           {lang === 'hi' && stand.title_hi ? stand.title_hi : stand.title}
+                          {(standStates[stand.id] ?? []).length > 0 && (
+                            <span className="mt-1 flex flex-wrap gap-1">
+                              {(standStates[stand.id] ?? []).map((code) => (
+                                <span key={code} className="rounded-full bg-faint px-1.5 py-0.5 text-[10px] font-semibold text-sub">
+                                  {stateName(code, lang)}
+                                </span>
+                              ))}
+                            </span>
+                          )}
                         </span>
                         <span className="font-mono text-sm text-navy tabular-nums shrink-0">
                           {fmt(localCount(stand.id))}
