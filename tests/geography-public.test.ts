@@ -50,7 +50,7 @@ describe('phase7 geography + public counts', () => {
     expect(src).toMatch(/playReady|embedReady|ready\[/);
     expect(src).toMatch(/openPlayer|watching/);
     expect(src).toMatch(/grid-cols-2/);
-    expect(src).toMatch(/youtube-nocookie\.com\/embed/);
+    expect(src).toMatch(/youtubeReelEmbedSrc\(/);
     expect(src).toMatch(/backToGallery|closePlayer/);
   });
 
