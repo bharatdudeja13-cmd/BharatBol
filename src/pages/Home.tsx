@@ -43,6 +43,9 @@ export default function Home() {
     () => deriveOpenIssues(stands, standStates),
     [stands, standStates]
   );
+  const openTotal = openNational + openStateTagged;
+  /** Added today is a subset of open stands (same live set). */
+  const addedTodayCount = Math.min(addedToday.length, openTotal);
 
   const topStates = useMemo(() => topIssueStates(issuesByState, 5), [issuesByState]);
   const topMax = topStates[0]?.count ?? 0;
@@ -110,22 +113,14 @@ export default function Home() {
       <section className="mb-10 rounded-3xl border border-line bg-white/80 px-5 py-6 sm:px-7 shadow-lift">
         <p className="text-xs font-mono uppercase tracking-widest text-saffron">{t('home.dailyPulseTitle')}</p>
         <p className="mt-2 text-sm text-sub max-w-2xl leading-relaxed">{t('home.dailyPulseSub')}</p>
-        <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="mt-5 grid grid-cols-2 gap-3 max-w-md">
           <div className="rounded-2xl bg-faint border border-line px-3 py-3 text-center">
-            <p className="font-display text-2xl font-bold text-navy tabular-nums">{fmt(openNational)}</p>
-            <p className="text-[11px] text-sub mt-1 leading-snug">{t('home.openNational')}</p>
+            <p className="font-display text-2xl font-bold text-navy tabular-nums">{fmt(openTotal)}</p>
+            <p className="text-[11px] text-sub mt-1 leading-snug">{t('home.openTotal')}</p>
           </div>
           <div className="rounded-2xl bg-faint border border-line px-3 py-3 text-center">
-            <p className="font-display text-2xl font-bold text-navy tabular-nums">{fmt(openStateTagged)}</p>
-            <p className="text-[11px] text-sub mt-1 leading-snug">{t('home.openStateTagged')}</p>
-          </div>
-          <div className="rounded-2xl bg-faint border border-line px-3 py-3 text-center">
-            <p className="font-display text-2xl font-bold text-navy tabular-nums">{fmt(addedToday.length)}</p>
+            <p className="font-display text-2xl font-bold text-navy tabular-nums">{fmt(addedTodayCount)}</p>
             <p className="text-[11px] text-sub mt-1 leading-snug">{t('home.addedToday')}</p>
-          </div>
-          <div className="rounded-2xl bg-faint border border-line px-3 py-3 text-center">
-            <p className="font-display text-2xl font-bold text-green tabular-nums">+{fmt(todayTotal)}</p>
-            <p className="text-[11px] text-sub mt-1 leading-snug">{t('home.standingToday')}</p>
           </div>
         </div>
         {addedToday.length > 0 && (

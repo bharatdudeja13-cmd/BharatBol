@@ -56,7 +56,7 @@ weaken the §1 ballot model.
 lowercase host, drop fragments/trailing slashes. Unique constraint = one feed item per
 canonical URL, ever; resubmits get "already submitted".
 
-**Anti-abuse.** Per-account rate limit (5/day, tunable in the Edge Function) via the
+**Anti-abuse.** Per-account rate limit (10/day, tunable in the Edge Function) via the
 ledger; URL allowlist (YouTube, X, Instagram hosts only at launch); auto pre-flag
 (§3) prioritizes review, never auto-publishes.
 

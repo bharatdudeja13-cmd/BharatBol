@@ -10,7 +10,7 @@
 import { adminClient, json, preflight } from '../_shared/common.ts';
 import { parseSocialUrl } from '../_shared/feedUrl.ts';
 
-const RATE_LIMIT_PER_DAY = 5;
+const RATE_LIMIT_PER_DAY = 10;
 
 /** Words that merely FLAG an item for priority human review. */
 const PRESCREEN = [

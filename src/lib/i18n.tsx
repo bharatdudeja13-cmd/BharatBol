@@ -48,10 +48,8 @@ const en = {
   'home.dailyPulseTitle': 'Open issues, added daily',
   'home.dailyPulseSub':
     'State and national issues that need a public stand are identified and opened here every day.',
-  'home.openNational': 'All India open',
-  'home.openStateTagged': 'State-tagged open',
+  'home.openTotal': 'Open now',
   'home.addedToday': 'Added today',
-  'home.standingToday': 'Stood today',
   'home.seeAllStands': 'See all stands',
   'home.issuesMapTitle': 'Where issues are open',
   'home.issuesMapSub':
@@ -350,10 +348,8 @@ const hi: Record<keyof typeof en, string> = {
   'home.dailyPulseTitle': 'खुले मुद्दे, हर दिन जुड़ते हैं',
   'home.dailyPulseSub':
     'जिन राज्य और राष्ट्रीय मुद्दों पर सार्वजनिक पक्ष चाहिए, उन्हें यहाँ हर दिन पहचाना और खोला जाता है।',
-  'home.openNational': 'अखिल भारत खुले',
-  'home.openStateTagged': 'राज्य-टैग खुले',
+  'home.openTotal': 'अभी खुले',
   'home.addedToday': 'आज जुड़े',
-  'home.standingToday': 'आज खड़े',
   'home.seeAllStands': 'सभी पक्ष देखें',
   'home.issuesMapTitle': 'मुद्दे कहाँ खुले हैं',
   'home.issuesMapSub':
