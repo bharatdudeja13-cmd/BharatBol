@@ -1,20 +1,17 @@
 /**
  * feed-submit — a citizen submits a link.
  *
- * TEMPORARY publish policy (human-approved): items land as `approved`
- * immediately so evidence is visible without a moderator round-trip.
- * Safety that remains: share-tag scrub, sealed ledger, keyword `flagged`,
- * report → `re_review` hide, unverified label, never re-host.
- * Flip the insert status back to `pending` to restore human-before-public.
+ * Validated public links land as `approved` immediately.
+ * Source-platform rules are the first safeguard. BharatBol keeps share-tag
+ * stripping, a sealed ledger, keyword flags, report-driven removal for review,
+ * unverified labels, and no media re-hosting.
  */
 import { adminClient, json, preflight } from '../_shared/common.ts';
 import { parseSocialUrl } from '../_shared/feedUrl.ts';
 
 const RATE_LIMIT_PER_DAY = 10;
 
-/** Words that merely FLAG an item for priority human review. */
-// Safety pre-screen: content that must never auto-publish (routed to
-// human review). Conservative — it flags, it does not reject.
+/** Words that flag an item for priority review. */
 const PRESCREEN = [
   'address', 'phone number', 'aadhaar', 'aadhar', 'pan card', 'home of',
   'kill', 'shoot', 'blood', 'gore', 'corpse', 'dead body',

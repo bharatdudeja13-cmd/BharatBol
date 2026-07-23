@@ -1,6 +1,6 @@
 /**
  * Feed gate: the public feed can never expose who submitted an item, and
- * nothing reaches the public without a human approving it.
+ * public content never exposes who submitted it.
  *
  * (Separate from the §1 ballot gate, which is unaffected: this covers the
  * disclosed asymmetry documented in docs/content-feed-design.md §2.)
