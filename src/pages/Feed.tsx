@@ -15,7 +15,7 @@ import { stateName, STATES } from '../lib/states';
 import { PLATFORM_LABEL } from '../lib/feedUrl';
 import type { FeedItem, Stand } from '../lib/types';
 import { isLive, supabase } from '../lib/supabase';
-import { youtubeIdFromUrl } from '../lib/evidenceMedia';
+import { youtubeIdFromUrl, youtubeReelEmbedSrc } from '../lib/evidenceMedia';
 import { EvidenceThumb } from '../components/EvidenceThumb';
 
 /** Full-viewport reel height above BottomNav. */
@@ -512,7 +512,7 @@ export default function Feed() {
                   className={`absolute inset-0 w-full h-full border-0 pointer-events-none transition-opacity duration-200 ${
                     playReady ? 'opacity-100' : 'opacity-0'
                   }`}
-                  src={`https://www.youtube-nocookie.com/embed/${yid}?autoplay=1&rel=0&playsinline=1&modestbranding=1&mute=1&enablejsapi=1&controls=0`}
+                  src={youtubeReelEmbedSrc(yid)}
                   title={item.title ?? 'YouTube'}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture"
                   onLoad={() => {

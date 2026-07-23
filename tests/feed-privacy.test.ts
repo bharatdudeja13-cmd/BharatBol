@@ -126,8 +126,10 @@ describe('link + embed, never re-host', () => {
   });
 
   it('YouTube embeds use the privacy-enhanced host in the Feed player', () => {
-    const src = read('src/pages/Feed.tsx');
-    expect(src).toMatch(/youtube-nocookie\.com/);
+    // The embed src moved into youtubeReelEmbedSrc (tests/reel-playback.test.ts);
+    // the player must build it from that helper, which uses the nocookie host.
+    expect(read('src/pages/Feed.tsx')).toMatch(/youtubeReelEmbedSrc\(/);
+    expect(read('src/lib/evidenceMedia.ts')).toMatch(/youtube-nocookie\.com/);
     expect(read('src/components/FeedCard.tsx')).toMatch(/evidenceWatchPath/);
   });
 

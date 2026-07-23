@@ -16,6 +16,31 @@ export function youtubeIdFromUrl(url: string): string | null {
   }
 }
 
+/**
+ * Reel embed src for a YouTube video id.
+ *
+ * Every param here is load-bearing for tap-to-play, so it lives in one
+ * tested place (tests/reel-playback.test.ts) rather than inline in the
+ * player JSX where a future edit could silently drop one:
+ *   - mute=1 + playsinline=1  → muted inline autoplay is allowed by mobile
+ *     browser policy; without both, tapping a reel shows a frozen poster.
+ *   - autoplay=1              → start on mount of the active slide.
+ *   - enablejsapi=1           → lets the unmute control postMessage the player.
+ * Instagram is deliberately NOT playable inline (poster + open original).
+ */
+export function youtubeReelEmbedSrc(videoId: string): string {
+  const params = new URLSearchParams({
+    autoplay: '1',
+    mute: '1',
+    playsinline: '1',
+    rel: '0',
+    modestbranding: '1',
+    enablejsapi: '1',
+    controls: '0',
+  });
+  return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
+}
+
 /** Instagram shortcode from a reel / post / tv URL. */
 export function instagramShortcode(url: string): string | null {
   const parsed = parseSocialUrl(url);
