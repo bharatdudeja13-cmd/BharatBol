@@ -1,0 +1,49 @@
+# Scheduled Sigstore/Rekor checkpoint over the public stand ledger.
+#
+# Every 12 hours (and on demand) this computes a Merkle root over the
+# anonymous stand_pulse log, signs it, submits the signed checkpoint to the
+# public Rekor transparency log, and commits it to checkpoints/roots.jsonl.
+# Because the roots — each carrying a Rekor UUID/index — live in git and in
+# an append-only external log, the operator cannot quietly rewrite history.
+#
+# Secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_URL         = https://<ref>.supabase.co
+#   SUPABASE_ANON_KEY    = sb_publishable_...  (public-by-design)
+#   LEDGER_SIGNING_KEY   = the ECDSA P-256 PRIVATE key PEM (never committed)
+name: Ledger checkpoint
+
+on:
+  schedule:
+    - cron: '23 */12 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  checkpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Sign a checkpoint into Rekor and commit it
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          LEDGER_SIGNING_KEY: ${{ secrets.LEDGER_SIGNING_KEY }}
+        run: node scripts/checkpoint-rekor.mjs
+
+      - name: Commit the new root (skipped when the log has not grown)
+        run: |
+          if git diff --quiet; then
+            echo "no new entries — nothing to commit"
+            exit 0
+          fi
+          git config user.name "bharatbol-ledger[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add checkpoints/roots.jsonl
+          git commit -m "ledger checkpoint: $(tail -1 checkpoints/roots.jsonl | node -e 'const c=JSON.parse(require("fs").readFileSync(0));console.log(`size=${c.size} root=${c.root.slice(0,16)}… rekor#${c.rekor_index}`)')"
+          git push

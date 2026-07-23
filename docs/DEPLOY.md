@@ -190,3 +190,25 @@ browser (including while signed out), your name appears on the wall (if opted in
 decrements the count, and account deletion (Profile → delete) removes commitments and erases
 the account. Watch evidence and national totals without signing in.
 Run `npm test` on every change to the schema or functions.
+
+
+## 6. Public ledger (Sigstore/Rekor)
+
+The public ledger (`/ledger`) signs a Merkle checkpoint of the anonymous
+`stand_pulse` log into the Rekor transparency log on a schedule.
+
+1. Run the phase 6/7/8 migrations (they create `stand_pulse`).
+2. Generate the signing key: `node scripts/generate-ledger-key.mjs`.
+   - Paste the PUBLIC key into `src/config/ledgerKey.ts` (commit it).
+   - Add the PRIVATE key as GitHub Actions secret `LEDGER_SIGNING_KEY`
+     (plus `SUPABASE_URL`, `SUPABASE_ANON_KEY`). Never commit it.
+3. The [ledger-checkpoint workflow](../.github/workflows/ledger-checkpoint.yml)
+   runs every 12h (and on demand): it signs a checkpoint into Rekor and
+   commits it to `checkpoints/roots.jsonl` with the Rekor uuid/index.
+   Because the page bundles that file at build, redeploy after new
+   checkpoints to surface the newest Rekor link.
+4. Anyone verifies without an account: `node scripts/recount-ledger.mjs`.
+
+The ledger reads only `stand_pulse` (anonymous: id, stand_id, delta, at) —
+never `stand_commitments`. Timestamps are shown exactly, by owner choice;
+the page discloses the low-volume de-anonymization caveat honestly.
