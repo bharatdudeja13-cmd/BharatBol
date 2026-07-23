@@ -13,11 +13,26 @@ import { parseSocialUrl } from '../_shared/feedUrl.ts';
 const RATE_LIMIT_PER_DAY = 10;
 
 /** Words that merely FLAG an item for priority human review. */
+// Safety pre-screen: content that must never auto-publish (routed to
+// human review). Conservative — it flags, it does not reject.
 const PRESCREEN = [
   'address', 'phone number', 'aadhaar', 'aadhar', 'pan card', 'home of',
   'kill', 'shoot', 'blood', 'gore', 'corpse', 'dead body',
   'nude', 'nsfw', 'xxx', 'porn',
   'traitor', 'anti-national', 'jihad', 'terrorist',
+];
+
+// Relevance pre-screen: likely personal / lifestyle / appearance / off-topic
+// content that is probably NOT about a public civic issue. Also flags for
+// human review (relevance to the tagged issue must be affirmed by a person),
+// so a gym reel or a tourist selfie can no longer auto-publish as evidence.
+const RELEVANCE_PRESCREEN = [
+  'gym', 'workout', 'fitness', 'bodybuilding', 'handstand', 'gymnastics',
+  'yoga', 'dance', 'dancing', 'selfie', 'vlog', 'vlogging', 'prank',
+  'makeup', 'skincare', 'outfit', 'ootd', 'haul', 'fashion', 'aesthetic',
+  'wedding', 'birthday', 'anniversary', 'vacation', 'holiday', 'trip', 'tour',
+  'tourist', 'travel diaries', 'foodie', 'recipe', 'unboxing', 'asmr',
+  'reels trending', 'trending song', 'lip sync', 'lipsync', 'comedy skit',
 ];
 
 const ISSUES = [
@@ -174,7 +189,15 @@ Deno.serve(async (req) => {
 
   const meta = await fetchMeta(parsed.platform, parsed.canon, parsed.id);
   const haystack = `${meta.title ?? ''} ${meta.author_name ?? ''}`.toLowerCase();
-  const flagged = PRESCREEN.some((w) => haystack.includes(w));
+  const flagged =
+    PRESCREEN.some((w) => haystack.includes(w)) ||
+    RELEVANCE_PRESCREEN.some((w) => haystack.includes(w));
+
+  // Relevance is now an approval criterion. Clean items still auto-publish
+  // (the temporary auto-approve policy), but anything the pre-screen flags —
+  // safety OR likely-irrelevant/personal — lands as `pending`, so a human
+  // must affirm it relates to the tagged civic issue before it goes public.
+  const status = flagged ? 'pending' : 'approved';
 
   const { data: item, error: insErr } = await admin
     .from('feed_items')
@@ -188,11 +211,8 @@ Deno.serve(async (req) => {
       issue: body.issue,
       state,
       scope,
-      // TEMPORARY (human-approved): auto-publish so evidence lands immediately.
-      // Report → re_review still hides; flagged still prioritises /admin.
-      // Flip back to 'pending' to restore human-before-public.
-      status: 'approved',
-      approved_at: new Date().toISOString(),
+      status,
+      approved_at: status === 'approved' ? new Date().toISOString() : null,
       flagged,
     })
     .select('id')
@@ -205,5 +225,5 @@ Deno.serve(async (req) => {
     url_canon: parsed.canon,
   });
 
-  return json({ ok: true, status: 'approved' });
+  return json({ ok: true, status });
 });

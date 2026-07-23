@@ -12,6 +12,10 @@ export default function Moderation() {
 
   const RULES: [string, string][] = [
     [
+      'Must be about a civic issue',
+      'Every submission must clearly relate to a public civic issue. Content centred on a private individual, personal or lifestyle content (daily life, travel, fitness, dance, food), and appearance-focused content is not accepted — a moderator must affirm relevance to the tagged issue before anything is published.',
+    ],
+    [
       'Identifying anyone',
       'Nothing that identifies or exposes a private person, protester, police officer, official or bystander - no names, faces used to identify, addresses, phone numbers, ID numbers, or workplaces.',
     ],
@@ -27,6 +31,10 @@ export default function Moderation() {
   ];
 
   const RULES_HI: [string, string][] = [
+    [
+      'किसी नागरिक मुद्दे से जुड़ा हो',
+      'हर प्रविष्टि किसी सार्वजनिक नागरिक मुद्दे से स्पष्ट रूप से संबंधित होनी चाहिए। किसी निजी व्यक्ति पर केंद्रित सामग्री, व्यक्तिगत या जीवनशैली सामग्री (रोज़मर्रा की ज़िंदगी, यात्रा, फ़िटनेस, नृत्य, खान-पान) और दिखावट-केंद्रित सामग्री स्वीकार नहीं की जाती — प्रकाशन से पहले एक समीक्षक को चिह्नित मुद्दे से प्रासंगिकता की पुष्टि करनी होती है।',
+    ],
     [
       'किसी की पहचान उजागर करना',
       'ऐसा कुछ नहीं जो किसी निजी व्यक्ति, प्रदर्शनकारी, पुलिसकर्मी, अधिकारी या राहगीर की पहचान उजागर करे - नाम, पहचान के लिए इस्तेमाल चेहरे, पते, फ़ोन नंबर, पहचान संख्या या कार्यस्थल नहीं।',
