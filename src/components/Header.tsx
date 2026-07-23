@@ -4,9 +4,10 @@ import { useI18n } from '../lib/i18n';
 import { useAuth } from '../state/AuthProvider';
 import { isLive } from '../lib/supabase';
 import { BRAND } from '../config/brand';
+import { LanguageSelector } from './LanguageSelector';
 
 export function Header() {
-  const { t, lang, setLang } = useI18n();
+  const { t, lang } = useI18n();
   const { session, signIn, signOut } = useAuth();
 
   const navCls = ({ isActive }: { isActive: boolean }) =>
@@ -38,9 +39,6 @@ export function Header() {
           <NavLink to="/feed" className={navCls}>
             {t('nav.feed')}
           </NavLink>
-          <NavLink to="/evidence" className={navCls}>
-            {t('nav.watch')}
-          </NavLink>
           <NavLink to="/about" className={navCls}>
             {t('nav.about')}
           </NavLink>
@@ -51,13 +49,7 @@ export function Header() {
           )}
         </nav>
 
-        <button
-          className="btn-ghost text-sm font-mono px-3"
-          onClick={() => setLang(lang === 'en' ? 'hi' : 'en')}
-          aria-label={lang === 'en' ? 'हिन्दी में देखें' : 'View in English'}
-        >
-          {lang === 'en' ? 'हिं' : 'EN'}
-        </button>
+        <LanguageSelector />
 
         {isLive &&
           (session ? (

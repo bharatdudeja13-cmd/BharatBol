@@ -42,7 +42,7 @@ export const STATES: StateTile[] = [
 
 const byCode = new Map(STATES.map((s) => [s.code, s]));
 
-export function stateName(code: string | null | undefined, lang: 'en' | 'hi' = 'en'): string {
+export function stateName(code: string | null | undefined, lang: string = 'en'): string {
   if (!code) return '';
   const s = byCode.get(code);
   if (!s) return code;

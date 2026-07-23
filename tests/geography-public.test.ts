@@ -22,8 +22,12 @@ describe('phase7 geography + public counts', () => {
     expect(sql).toMatch(/feed_reaction_counts with \(security_invoker = false\)/);
   });
 
-  it('loadEvidence includes national scope for state tiles', () => {
-    expect(read('src/state/useEvidence.ts')).toMatch(/scope\.eq\.national/);
+  it('loadEvidence includes national scope for state tiles (not other states)', () => {
+    const src = read('src/state/useEvidence.ts');
+    expect(src).toMatch(/scope\.eq\.national/);
+    expect(src).toMatch(/evidenceMatchesState/);
+    // Must not refill empty state tiles with every approved clip.
+    expect(src).not.toMatch(/tiles never look empty|look broken/);
   });
 
   it('Auth uses PKCE and origin redirectTo', () => {
@@ -40,10 +44,60 @@ describe('phase7 geography + public counts', () => {
     expect(create?.[1]).not.toMatch(/user_id/);
   });
 
-  it('EvidencePlayer keeps poster until iframe onLoad', () => {
-    const src = read('src/pages/EvidencePlayer.tsx');
+  it('Feed reels keep poster until iframe onLoad', () => {
+    const src = read('src/pages/Feed.tsx');
     expect(src).toMatch(/onLoad/);
-    expect(src).toMatch(/embedReady|ready\[/);
+    expect(src).toMatch(/playReady|embedReady|ready\[/);
+    expect(src).toMatch(/openPlayer|watching/);
+    expect(src).toMatch(/grid-cols-2/);
+    expect(src).toMatch(/youtube-nocookie\.com\/embed/);
+    expect(src).toMatch(/backToGallery|closePlayer/);
+  });
+
+  it('language picker portals and LangProvider lazy-inits from storage/browser', () => {
+    expect(read('src/components/LanguageSelector.tsx')).toMatch(/createPortal/);
+    expect(read('src/lib/i18n.tsx')).toMatch(/useState<Lang>\(\(\) => initialLang\(\)\)/);
+    expect(read('src/lib/i18n.tsx')).toMatch(/feed\.subShort/);
+    expect(read('src/lib/i18n.tsx')).toMatch(/feed\.backToGallery/);
+  });
+
+  it('Home evidence count and CTA route to Feed', () => {
+    const home = read('src/pages/Home.tsx');
+    expect(home).toMatch(/to="\/feed"/);
+    expect(home).toMatch(/home\.evidenceCount/);
+    expect(home).toMatch(/home\.watchEvidence|evidenceWatchPath/);
+  });
+
+  it('Feed surfaces submit-evidence CTA to /add', () => {
+    const feed = read('src/pages/Feed.tsx');
+    expect(feed).toMatch(/to="\/add"/);
+    expect(feed).toMatch(/feed\.submitEvidence/);
+    expect(feed).toMatch(/feed\.submitHint/);
+  });
+
+  it('citizen card truncates many stands with and N more', () => {
+    expect(read('src/lib/cards.ts')).toMatch(/and \$\{more\} more/);
+  });
+
+  it('Instagram posters use Worker proxy without oEmbed token', () => {
+    expect(read('worker/index.ts')).toMatch(/\/api\/ig-poster\//);
+    expect(read('wrangler.jsonc')).toMatch(/\/api\/ig-poster\/\*/);
+    expect(read('src/lib/evidenceMedia.ts')).toMatch(/instagramProxyPoster|\/api\/ig-poster\//);
+    expect(read('src/lib/evidenceMedia.ts')).not.toMatch(/INSTAGRAM_OEMBED_TOKEN/);
+  });
+
+  it('language picker covers scheduled Indian languages + browser detect', () => {
+    const langs = read('src/config/languages.ts');
+    expect(langs).toMatch(/detectBrowserLang/);
+    expect(langs).toMatch(/code: 'ta'/);
+    expect(langs).toMatch(/code: 'te'/);
+    expect(read('src/components/Header.tsx')).toMatch(/LanguageSelector/);
+  });
+
+  it('Watch tab is retired; Feed is the explore destination', () => {
+    expect(read('src/components/BottomNav.tsx')).toMatch(/to="\/feed"/);
+    expect(read('src/components/BottomNav.tsx')).not.toMatch(/to="\/evidence"/);
+    expect(read('src/App.tsx')).toMatch(/EvidenceRedirect|Navigate to=\{`\/feed/);
   });
 
   it('Home tile lists all live stands not only breakdown rows', () => {

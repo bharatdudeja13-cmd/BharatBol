@@ -13,6 +13,26 @@ export type EvidenceFilters = {
   enabled?: boolean;
 };
 
+/** Resolve scope when older rows omit the column. */
+export function evidenceScopeOf(item: Pick<FeedItem, 'scope' | 'state'>): 'state' | 'national' {
+  if (item.scope === 'national' || item.scope === 'state') return item.scope;
+  return item.state ? 'state' : 'national';
+}
+
+/**
+ * State tile / Feed state filter rule:
+ * - national (All India) → every state + unfiltered gallery
+ * - state-scoped → ONLY that state's code (never leak into other states)
+ */
+export function evidenceMatchesState(
+  item: Pick<FeedItem, 'scope' | 'state'>,
+  stateCode: string | null | undefined
+): boolean {
+  if (!stateCode) return true;
+  if (evidenceScopeOf(item) === 'national') return true;
+  return item.state === stateCode;
+}
+
 function sortEvidenceForState(list: FeedItem[], stateCode: string | null | undefined): FeedItem[] {
   if (!stateCode) return list;
   return [...list].sort((a, b) => {
@@ -25,19 +45,22 @@ function sortEvidenceForState(list: FeedItem[], stateCode: string | null | undef
   });
 }
 
+function finalizeEvidence(
+  list: FeedItem[],
+  filters: EvidenceFilters
+): FeedItem[] {
+  const filtered = list.filter((i) => {
+    if (filters.issue && i.issue !== filters.issue) return false;
+    return evidenceMatchesState(i, filters.state);
+  });
+  return sortEvidenceForState(filtered, filters.state).slice(0, filters.limit ?? 40);
+}
+
 /** Approved feed items = public evidence. */
 export async function loadEvidence(filters: EvidenceFilters = {}): Promise<FeedItem[]> {
   if (filters.enabled === false) return [];
   if (!supabase) {
-    const list = DEMO_FEED.filter((i) => {
-      if (filters.issue && i.issue !== filters.issue) return false;
-      if (filters.state) {
-        const scope = i.scope ?? (i.state ? 'state' : 'national');
-        if (scope !== 'national' && i.state !== filters.state) return false;
-      }
-      return true;
-    });
-    return sortEvidenceForState(list, filters.state).slice(0, filters.limit ?? 40);
+    return finalizeEvidence(DEMO_FEED, filters);
   }
 
   const select =
@@ -47,15 +70,16 @@ export async function loadEvidence(filters: EvidenceFilters = {}): Promise<FeedI
     .select(select)
     .eq('status', 'approved')
     .order('approved_at', { ascending: false })
-    .limit(Math.max((filters.limit ?? 40) * 2, 40));
+    .limit(Math.max((filters.limit ?? 40) * 3, 40));
 
   if (filters.issue) q = q.eq('issue', filters.issue);
+  // State tile: this state's clips OR national (All India). Never other states.
   if (filters.state) {
-    q = q.or(`state.eq.${filters.state},scope.eq.national`);
+    q = q.or(`and(scope.eq.state,state.eq.${filters.state}),scope.eq.national`);
   }
 
   let { data, error } = await q;
-  // Pre-phase7 DBs lack `scope` — fall back so public evidence still loads for everyone.
+  // Pre-phase7 DBs lack `scope` — filter by state / null-state (national) only.
   if (error && /scope/i.test(error.message)) {
     let q2 = supabase
       .from('feed_items')
@@ -64,29 +88,68 @@ export async function loadEvidence(filters: EvidenceFilters = {}): Promise<FeedI
       )
       .eq('status', 'approved')
       .order('approved_at', { ascending: false })
-      .limit(filters.limit ?? 40);
+      .limit(Math.max((filters.limit ?? 40) * 3, 40));
     if (filters.issue) q2 = q2.eq('issue', filters.issue);
-    // Without scope: show all approved (incl. null state) when filtering by state,
-    // so tiles never look empty while migration rolls out.
+    if (filters.state) {
+      q2 = q2.or(`state.eq.${filters.state},state.is.null`);
+    }
     const res2 = await q2;
     data = res2.data as typeof data;
     error = res2.error;
   }
   if (error) return [];
-  let list = (data as FeedItem[] | null) ?? [];
+  const list = (data as FeedItem[] | null) ?? [];
 
-  // Empty state filter: show recent approved clips so tiles never look broken.
-  if (filters.state && list.length === 0) {
-    const fb = await supabase
-      .from('feed_items')
-      .select(select)
-      .eq('status', 'approved')
-      .order('approved_at', { ascending: false })
-      .limit(filters.limit ?? 40);
-    if (!fb.error) list = (fb.data as FeedItem[] | null) ?? [];
-  }
+  // Client-side enforce — never show another state's clip on this tile,
+  // even if the API/OR quirks or legacy rows misbehave. No "fill empty
+  // with everything" fallback (that leaked Delhi into every state).
+  return finalizeEvidence(list, filters);
+}
 
-  return sortEvidenceForState(list, filters.state).slice(0, filters.limit ?? 40);
+/** Fetch one approved item by id (ensures Watch deep-links open the right clip). */
+export async function loadEvidenceById(id: string): Promise<FeedItem | null> {
+  if (!id) return null;
+  if (!supabase) return DEMO_FEED.find((i) => i.id === id) ?? null;
+  const select =
+    'id,url,platform,title,author_name,thumbnail_url,issue,state,scope,status,submitted_on,approved_at';
+  const { data, error } = await supabase
+    .from('feed_items')
+    .select(select)
+    .eq('id', id)
+    .eq('status', 'approved')
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as FeedItem;
+}
+
+/** Public approved evidence count (homepage + Feed empty/loading context). */
+export async function loadEvidenceCount(): Promise<number> {
+  if (!supabase) return DEMO_FEED.length;
+  const { count, error } = await supabase
+    .from('feed_items')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'approved');
+  if (error) return 0;
+  return count ?? 0;
+}
+
+export function useEvidenceCount() {
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const n = await loadEvidenceCount();
+      if (!cancelled) {
+        setTotal(n);
+        setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return { total, loading };
 }
 
 export async function loadReactionCounts(ids: string[]): Promise<Record<string, ReactionCounts>> {
@@ -142,7 +205,7 @@ export function evidenceWatchPath(opts: {
   if (opts.id) p.set('id', opts.id);
   if (opts.stand) p.set('stand', opts.stand);
   const q = p.toString();
-  return q ? `/evidence?${q}` : '/evidence';
+  return q ? `/feed?${q}` : '/feed';
 }
 
 export const evidenceLive = isLive;

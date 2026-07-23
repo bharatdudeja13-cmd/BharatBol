@@ -43,8 +43,9 @@ guardrails live in the [README](../README.md); the privacy design is in
    insert into public.admins (user_id) values ('<your auth.users id>');
    ```
    Optional: `supabase secrets set INSTAGRAM_OEMBED_TOKEN='<facebook app token>'`
-   to fetch Instagram thumbnails. Without it, Instagram items stay titled
-   link-cards — BharatBol never scrapes.
+   for higher Instagram oEmbed rate limits. Not required for previews - BharatBol
+   uses Instagram's public `/p/{id}/media/?size=l` poster (token-free) plus
+   Meta's tokenless `instagram_oembed` when available.
    After phase6, stands and reactions are written under the signed-in account
    (temporary §1 override). Restore blind ballots later via
    [privacy-architecture.md](privacy-architecture.md).

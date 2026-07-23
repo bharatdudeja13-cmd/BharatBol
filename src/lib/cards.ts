@@ -230,16 +230,28 @@ export async function drawCitizenCard(opts: {
   y += 120;
 
   ctx.font = '600 44px "Plus Jakarta Sans", sans-serif';
-  const maxIssues = opts.format === 'story' ? 5 : 4;
-  for (const title of opts.titles.slice(0, maxIssues)) {
+  // Keep the issue list inside the card: show a few titles, then "and N more".
+  const maxIssues = opts.format === 'story' ? 4 : 3;
+  const shown = opts.titles.slice(0, maxIssues);
+  const more = Math.max(0, opts.titles.length - shown.length);
+  for (const title of shown) {
     drawChakra(ctx, 92, y - 14, 20, 'rgba(255,255,255,0.8)', 2);
     ctx.fillStyle = 'rgba(255,255,255,0.92)';
-    const lines = wrapText(ctx, title, w - 260).slice(0, 2);
-    for (const line of lines) {
-      ctx.fillText(line, 140, y);
-      y += 58;
+    const lines = wrapText(ctx, title, w - 260).slice(0, 1);
+    let line = lines[0] ?? title;
+    if (ctx.measureText(line).width > w - 260) {
+      while (line.length > 3 && ctx.measureText(`${line}…`).width > w - 260) {
+        line = line.slice(0, -1);
+      }
+      line = `${line}…`;
     }
-    y += 30;
+    ctx.fillText(line, 140, y);
+    y += 70;
+  }
+  if (more > 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    ctx.font = '600 40px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText(`and ${more} more`, 140, y);
   }
 
   footer(ctx, w, h, opts.url, opts.hashtags ?? BRAND.hashtag);
