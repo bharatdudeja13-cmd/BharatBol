@@ -3,26 +3,13 @@ import { useSearchParams } from 'react-router-dom';
 import { useStands } from '../state/StandsProvider';
 import { useI18n } from '../lib/i18n';
 import { StandCard } from '../components/StandCard';
-import { STATES, stateName } from '../lib/states';
-import type { Stand } from '../lib/types';
-
-/** all | national (untagged) | state code. Default is all - never profile home state. */
-type GeoFilter = 'all' | 'national' | string;
-
-function parseGeoParam(raw: string | null): GeoFilter {
-  if (!raw || raw === 'all') return 'all';
-  if (raw === 'national' || raw === 'all-india') return 'national';
-  return raw;
-}
-
-function standMatchesQuery(s: Stand, q: string): boolean {
-  if (!q) return true;
-  const hay = [s.title, s.title_hi, s.description, s.description_hi, s.category]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-  return hay.includes(q);
-}
+import { stateName } from '../lib/states';
+import {
+  buildStandSections,
+  parseGeoParam,
+  taggedStateCodes,
+  type GeoFilter,
+} from '../lib/standsGeography';
 
 export default function Stands() {
   const { stands, standStates, loading } = useStands();
@@ -60,53 +47,18 @@ export default function Stands() {
 
   const qNorm = query.trim().toLowerCase();
 
-  const taggedStateCodes = useMemo(() => {
-    const present = new Set<string>();
-    for (const codes of Object.values(standStates)) {
-      for (const c of codes) present.add(c);
-    }
-    return STATES.map((s) => s.code).filter((c) => present.has(c));
-  }, [standStates]);
+  const stateChips = useMemo(() => taggedStateCodes(standStates), [standStates]);
 
   const sections = useMemo(() => {
-    const tagsFor = (id: string) => standStates[id] ?? [];
-    const match = (s: Stand) => standMatchesQuery(s, qNorm);
-    const national = stands.filter((s) => tagsFor(s.id).length === 0 && match(s));
-    const forState = (code: string) =>
-      stands.filter((s) => tagsFor(s.id).includes(code) && match(s));
-
-    const out: { key: string; title: string; hint: string; items: Stand[] }[] = [];
-    if (filter === 'all' || filter === 'national') {
-      if (national.length > 0) {
-        out.push({
-          key: 'national',
-          title: t('stands.national'),
-          hint: t('stands.nationalHint'),
-          items: national,
-        });
-      }
-    }
-    if (filter === 'all') {
-      for (const code of taggedStateCodes) {
-        const items = forState(code);
-        if (items.length === 0) continue;
-        out.push({
-          key: code,
-          title: stateName(code, lang),
-          hint: t('stands.stateHint'),
-          items,
-        });
-      }
-    } else if (filter !== 'national') {
-      out.push({
-        key: filter,
-        title: stateName(filter, lang) || filter,
-        hint: t('stands.stateHint'),
-        items: forState(filter),
-      });
-    }
-    return out;
-  }, [filter, stands, standStates, taggedStateCodes, t, lang, qNorm]);
+    // Pure geography rules live in standsGeography (tested); the component
+    // only decorates each section with its localized title + hint.
+    return buildStandSections(stands, standStates, filter, qNorm).map((sec) => ({
+      ...sec,
+      title:
+        sec.key === 'national' ? t('stands.national') : stateName(sec.key, lang) || sec.key,
+      hint: sec.key === 'national' ? t('stands.nationalHint') : t('stands.stateHint'),
+    }));
+  }, [filter, stands, standStates, t, lang, qNorm]);
 
   const chipClass = (active: boolean) =>
     `shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold border transition ${
@@ -154,7 +106,7 @@ export default function Stands() {
           >
             {t('stands.national')}
           </button>
-          {taggedStateCodes.map((code) => (
+          {stateChips.map((code) => (
             <button
               key={code}
               type="button"
