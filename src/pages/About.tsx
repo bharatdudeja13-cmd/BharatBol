@@ -21,6 +21,11 @@ export default function About() {
       </section>
 
       <section className="space-y-3">
+        <h2 className="font-display font-semibold text-xl">{t('about.feedTitle')}</h2>
+        <p className="text-sub">{t('about.feedBody')}</p>
+      </section>
+
+      <section className="space-y-3">
         <h2 className="font-display font-semibold text-xl">{t('about.evidenceTitle')}</h2>
         <p className="text-sub">{t('about.evidenceBody')}</p>
       </section>

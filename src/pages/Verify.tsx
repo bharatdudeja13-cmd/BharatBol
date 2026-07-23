@@ -7,8 +7,8 @@ import { isLive, REPO_URL } from '../lib/supabase';
 import { fmt } from '../lib/format';
 
 /**
- * Verify — account-linked mode: compare displayed stand_counts to a
- * fresh read of public aggregates, and list this account's stands.
+ * Verify - public recount of stand_counts (anon-readable aggregates).
+ * Optional signed-in section lists this account's stands only.
  */
 export default function Verify() {
   const { session, signIn } = useAuth();
@@ -31,6 +31,7 @@ export default function Verify() {
     setState('running');
     try {
       const { supabase } = await import('../lib/supabase');
+      // Public aggregate view - granted to anon; no session required.
       const { data, error } = await supabase!.from('stand_counts').select('stand_id,total');
       if (error) throw error;
       const byId: Record<string, number> = {};
@@ -66,37 +67,42 @@ export default function Verify() {
     <div className="mx-auto max-w-2xl px-4 pt-10 space-y-8">
       <header>
         <h1 className="font-display font-bold text-3xl text-navy">{t('verify.title')}</h1>
-        <p className="text-sub mt-2">{t('verify.accountMode')}</p>
+        <p className="text-sub mt-2">{t('verify.publicMode')}</p>
       </header>
 
-      <button className="btn-primary" onClick={() => void run()} disabled={state === 'running'}>
-        {state === 'running' ? t('misc.loading') : t('verify.run')}
-      </button>
+      <section className="space-y-4">
+        <button className="btn-primary" onClick={() => void run()} disabled={state === 'running'}>
+          {state === 'running' ? t('misc.loading') : t('verify.run')}
+        </button>
 
-      {state === 'error' && <p className="text-saffron text-sm">{t('misc.error')}</p>}
+        {state === 'error' && <p className="text-saffron text-sm">{t('misc.error')}</p>}
 
-      {state === 'done' && (
-        <section className="space-y-4">
-          <p className="text-sm text-sub">
-            {t('counts.taken')}: {fmt(national)} → recount {fmt(nationalRecount)}
-            {national === nationalRecount ? ' ✓' : ''}
-          </p>
-          <ul className="card divide-y divide-line">
-            {rows.map((r) => (
-              <li key={r.standId} className="p-4 flex justify-between gap-4 text-sm">
-                <span>{r.title}</span>
-                <span className="font-mono tabular-nums shrink-0">
-                  {fmt(r.displayed)} / {fmt(r.recount)}
-                  {r.displayed === r.recount ? ' ✓' : ' ✗'}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+        {state === 'done' && (
+          <div className="space-y-4">
+            <p className="text-sm text-sub">
+              {t('counts.taken')}: {fmt(national)} → recount {fmt(nationalRecount)}
+              {national === nationalRecount ? ' ✓' : ''}
+            </p>
+            <ul className="card divide-y divide-line">
+              {rows.map((r) => (
+                <li key={r.standId} className="p-4 flex justify-between gap-4 text-sm">
+                  <Link to={`/stand/${r.standId}`} className="text-navy underline underline-offset-4">
+                    {r.title}
+                  </Link>
+                  <span className="font-mono tabular-nums shrink-0">
+                    {fmt(r.displayed)} / {fmt(r.recount)}
+                    {r.displayed === r.recount ? ' ✓' : ' ✗'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
 
       <section className="space-y-3">
         <h2 className="font-display font-semibold text-xl">{t('verify.mine')}</h2>
+        <p className="text-sm text-sub">{t('verify.mineHint')}</p>
         {!session ? (
           <button className="btn-secondary text-sm" onClick={() => void signIn()}>
             {t('nav.signIn')}
