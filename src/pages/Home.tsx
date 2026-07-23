@@ -14,7 +14,7 @@ import { useEvidence, evidenceWatchPath } from '../state/useEvidence';
 import { fmt } from '../lib/format';
 import { stateName } from '../lib/states';
 import { PwaInstallButton } from '../components/PwaInstallButton';
-import { deriveOpenIssues, topIssueStates } from '../lib/openIssues';
+import { deriveOpenIssues } from '../lib/openIssues';
 
 export default function Home() {
   const { stands, counts, national, wall, breakdown, standStates, standOfTheDayId, loading } =
@@ -46,9 +46,6 @@ export default function Home() {
   const openTotal = openNational + openStateTagged;
   /** Added today is a subset of open stands (same live set). */
   const addedTodayCount = Math.min(addedToday.length, openTotal);
-
-  const topStates = useMemo(() => topIssueStates(issuesByState, 5), [issuesByState]);
-  const topMax = topStates[0]?.count ?? 0;
 
   /** Tagged to this state first, then All India (untagged). Never other states only. */
   const openStands = useMemo(() => {
@@ -172,40 +169,6 @@ export default function Home() {
           ))}
           <span>{t('home.issuesLegendHigh')}</span>
         </div>
-
-        {topStates.length > 0 && (
-          <div className="mt-8">
-            <h3 className="text-sm font-semibold text-navy mb-3">{t('home.topStates')}</h3>
-            <ul className="space-y-2.5 max-w-lg">
-              {topStates.map(({ code, count }) => {
-                const pct = topMax > 0 ? Math.round((count / topMax) * 100) : 0;
-                const active = selState === code;
-                return (
-                  <li key={code}>
-                    <button
-                      type="button"
-                      onClick={() => setSelState(active ? null : code)}
-                      className={`w-full text-left rounded-xl px-3 py-2.5 transition border ${
-                        active ? 'border-saffron bg-saffron/10' : 'border-transparent hover:bg-faint'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-3 text-sm mb-1.5">
-                        <span className="font-semibold text-ink">{stateName(code, lang)}</span>
-                        <span className="font-mono tabular-nums text-navy">{fmt(count)}</span>
-                      </div>
-                      <div className="h-2 rounded-full bg-faint overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-navy transition-all"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
 
         {selState && (
           <div className="mt-6 rounded-t-3xl border border-line bg-white shadow-lift p-5 space-y-5 pb-8">
