@@ -4,14 +4,17 @@ import { useStands } from '../state/StandsProvider';
 import { useI18n } from '../lib/i18n';
 import { LiveNumber } from './LiveNumber';
 import { fmt } from '../lib/format';
+import { stateName } from '../lib/states';
+import { standPath } from '../lib/standUrl';
 
 export function StandCard({ stand, compact = false }: { stand: Stand; compact?: boolean }) {
-  const { counts, joined, requestStand } = useStands();
+  const { counts, joined, requestStand, standStates } = useStands();
   const { t, lang } = useI18n();
   const c = counts[stand.id] ?? { total: 0, today: 0 };
   const title = lang === 'hi' && stand.title_hi ? stand.title_hi : stand.title;
   const desc = lang === 'hi' && stand.description_hi ? stand.description_hi : stand.description;
   const isJoined = joined.has(stand.id);
+  const taggedStates = standStates[stand.id] ?? [];
 
   return (
     <article className={`card p-5 flex flex-col gap-3 ${compact ? 'w-72 shrink-0' : ''}`}>
@@ -24,13 +27,26 @@ export function StandCard({ stand, compact = false }: { stand: Stand; compact?: 
         <span className="uppercase tracking-wide">{stand.category}</span>
       </div>
 
-      <Link to={`/stand/${stand.id}`} className="group">
+      <Link to={standPath(stand)} className="group">
         <h3 className={`font-display font-semibold leading-snug group-hover:text-navy ${compact ? 'text-base line-clamp-2' : 'text-lg'}`}>
           {title}
         </h3>
       </Link>
 
       {!compact && <p className="text-sm text-sub leading-relaxed line-clamp-2">{desc}</p>}
+
+      {taggedStates.length > 0 && (
+        <div className="flex flex-wrap gap-1.5" aria-label="States especially relevant to this stand">
+          {taggedStates.map((code) => (
+            <span
+              key={code}
+              className="rounded-full border border-navy/15 bg-faint px-2 py-1 text-[10px] font-semibold text-navy"
+            >
+              {stateName(code, lang)}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="mt-auto flex items-end justify-between gap-3 pt-1">
         <div>
