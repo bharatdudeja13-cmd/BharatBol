@@ -12,7 +12,9 @@
     "test": "vitest run",
     "og": "node scripts/generate-og.mjs",
     "checkpoint": "node scripts/checkpoint.mjs --append checkpoints/roots.jsonl",
-    "recount": "node scripts/recount.mjs"
+    "recount": "node scripts/recount.mjs",
+    "ledger:checkpoint": "node scripts/checkpoint-rekor.mjs",
+    "ledger:recount": "node scripts/recount-ledger.mjs"
   },
   "dependencies": {
     "@cloudflare/blindrsa-ts": "^0.4.4",

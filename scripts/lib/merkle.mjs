@@ -12,8 +12,11 @@
 
 const te = new TextEncoder();
 
-/** Fixed field order — the wire format checkpoints commit to. */
+/** Fixed field order — the wire format checkpoints commit to.
+ *  A caller may supply its own leaf encoding via `__canon` (used by the
+ *  stand ledger, whose entries hash over scripts/lib/ledger.js strings). */
 export function canonicalEvent(e) {
+  if (typeof e.__canon === 'string') return e.__canon;
   return JSON.stringify({
     seq: Number(e.seq),
     event: e.event,
