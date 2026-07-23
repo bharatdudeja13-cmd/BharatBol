@@ -12,6 +12,10 @@ export default function Moderation() {
 
   const RULES: [string, string][] = [
     [
+      'Please keep it civic',
+      'BharatBol is for public civic issues. Everything you submit is published immediately, and the platform it comes from (Instagram, YouTube, X, …) is the primary moderator — we only link and embed, never re-host. Please do not submit purely personal, lifestyle, or appearance-focused content. If something does not belong, anyone can report it and it is hidden for a moderator to review.',
+    ],
+    [
       'Identifying anyone',
       'Nothing that identifies or exposes a private person, protester, police officer, official or bystander - no names, faces used to identify, addresses, phone numbers, ID numbers, or workplaces.',
     ],
@@ -27,6 +31,10 @@ export default function Moderation() {
   ];
 
   const RULES_HI: [string, string][] = [
+    [
+      'कृपया इसे नागरिक रखें',
+      'भारत बोल सार्वजनिक नागरिक मुद्दों के लिए है। आप जो भी भेजते हैं वह तुरंत प्रकाशित होता है, और जिस मंच से वह आता है (Instagram, YouTube, X, …) वही प्राथमिक मॉडरेटर है — हम केवल लिंक और एम्बेड करते हैं, कभी दोबारा होस्ट नहीं। कृपया विशुद्ध व्यक्तिगत, जीवनशैली या दिखावट-केंद्रित सामग्री न भेजें। यदि कुछ उपयुक्त न हो, तो कोई भी उसकी रिपोर्ट कर सकता है और वह समीक्षा के लिए छिपा दी जाती है।',
+    ],
     [
       'किसी की पहचान उजागर करना',
       'ऐसा कुछ नहीं जो किसी निजी व्यक्ति, प्रदर्शनकारी, पुलिसकर्मी, अधिकारी या राहगीर की पहचान उजागर करे - नाम, पहचान के लिए इस्तेमाल चेहरे, पते, फ़ोन नंबर, पहचान संख्या या कार्यस्थल नहीं।',

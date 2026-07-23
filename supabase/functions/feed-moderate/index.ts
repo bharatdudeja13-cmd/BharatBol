@@ -14,7 +14,7 @@
 import { adminClient, json, preflight } from '../_shared/common.ts';
 
 const REASONS = [
-  'doxxing', 'violence', 'targeting', 'sexual', 'minor',
+  'doxxing', 'violence', 'targeting', 'sexual', 'minor', 'personal',
   'misinfo', 'offtopic', 'duplicate', 'other',
 ];
 
@@ -52,6 +52,7 @@ Deno.serve(async (req) => {
     issue?: string;
     state?: string | null;
     reason?: string;
+    relevant?: boolean;
   };
   try {
     body = await req.json();
@@ -84,10 +85,40 @@ Deno.serve(async (req) => {
     return json({ items });
   }
 
+  // ---- Already-approved items, so a moderator can remove ones that fail
+  //      the relevance bar after the fact. ----
+  if (body.action === 'list_approved') {
+    const { data, error } = await admin
+      .from('feed_items')
+      .select('id,url,platform,title,author_name,thumbnail_url,issue,state,status,flagged,reports,submitted_on')
+      .eq('status', 'approved')
+      .order('approved_at', { ascending: false })
+      .limit(100);
+    if (error) return json({ error: 'list failed' }, 500);
+    return json({ items: data ?? [] });
+  }
+
   if (!body.id) return json({ error: 'missing id' }, 400);
+
+  // ---- Remove an already-approved item (reason required) ----
+  if (body.action === 'remove') {
+    if (!REASONS.includes(body.reason ?? '')) return json({ error: 'reason required' }, 400);
+    const { error } = await admin
+      .from('feed_items')
+      .update({ status: 'rejected', reject_reason: body.reason, approved_at: null })
+      .eq('id', body.id);
+    if (error) return json({ error: 'remove failed' }, 500);
+    return json({ ok: true, status: 'rejected' });
+  }
 
   // ---- Approve (may correct the issue/state the submitter chose) ----
   if (body.action === 'approve') {
+    // Relevance is a required approval criterion: the reviewer must affirm
+    // the item clearly relates to the tagged civic issue. No affirmation,
+    // no publication.
+    if (body.relevant !== true) {
+      return json({ error: 'affirm relevance to the tagged civic issue to approve' }, 400);
+    }
     const patch: Record<string, unknown> = {
       status: 'approved',
       approved_at: new Date().toISOString(),

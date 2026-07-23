@@ -63,18 +63,22 @@ describe('no submitter identity is exposed', () => {
   });
 });
 
-describe('publishing path (temporary auto-approve)', () => {
+describe('publishing path (relevance-gated auto-approve)', () => {
   it('the only public read policy on feed_items is status = approved', () => {
     const policies = noComments.match(/create policy[^;]*on public\.feed_items[^;]*;/g) ?? [];
     expect(policies.length).toBe(1);
     expect(policies[0]).toMatch(/for select using \(status = 'approved'\)/);
   });
 
-  it('feed-submit auto-publishes as approved (temporary human-approved policy)', () => {
+  it('feed-submit publishes everything; the pre-screen only flags for optional review', () => {
     const src = read('supabase/functions/feed-submit/index.ts');
-    expect(src).toMatch(/status:\s*'approved'/);
-    expect(src).toMatch(/TEMPORARY/);
-    expect(src).not.toMatch(/status:\s*'pending'/);
+    // Owner decision: source platform is the primary moderator; everything
+    // a citizen submits publishes immediately. The pre-screen sets `flagged`
+    // (admin signal) but never gates publication.
+    expect(src).toMatch(/const status = 'approved'/);
+    expect(src).not.toMatch(/flagged \? 'pending'/);
+    expect(src).toMatch(/RELEVANCE_PRESCREEN/);
+    expect(src).not.toMatch(/status:\s*'rejected'/);
   });
 
   it('feed-moderate requires membership of the sealed admins table', () => {
@@ -103,6 +107,45 @@ describe('publishing path (temporary auto-approve)', () => {
     const admin = read('src/pages/Admin.tsx');
     expect(admin).toMatch(/mod\.sectionReReview/);
     expect(admin).toMatch(/status === 're_review'/);
+  });
+});
+
+describe('reactive relevance moderation (Task 5, publish-everything posture)', () => {
+  const submit = read('supabase/functions/feed-submit/index.ts');
+  const moderate = read('supabase/functions/feed-moderate/index.ts');
+  const admin = read('src/pages/Admin.tsx');
+
+  it('the pre-screen flags likely personal / lifestyle / appearance content for review', () => {
+    for (const w of ['gym', 'selfie', 'vlog', 'makeup', 'wedding', 'tourist']) {
+      expect(submit).toMatch(new RegExp(`'${w}'`));
+    }
+  });
+
+  it('restoring a reported item still requires an explicit relevance affirmation', () => {
+    expect(moderate).toMatch(/body\.relevant !== true/);
+    expect(moderate).toMatch(/affirm relevance/i);
+    expect(admin).toMatch(/affirmed\.has\(item\.id\)/);
+    expect(admin).toMatch(/relevant: true/);
+  });
+
+  it('moderators can remove already-published items (list_approved + remove)', () => {
+    expect(moderate).toMatch(/action === 'list_approved'/);
+    expect(moderate).toMatch(/action === 'remove'/);
+    expect(admin).toMatch(/'remove'/);
+    expect(admin).toMatch(/mod\.sectionApproved/);
+  });
+
+  it("'personal' is a reject reason in schema, function and UI", () => {
+    expect(read('supabase/phase8_moderation_relevance.sql')).toMatch(/'personal'/);
+    expect(moderate).toMatch(/'personal'/);
+    expect(admin).toMatch(/'personal'/);
+  });
+
+  it('the policy is honest about publish-everything + platform-first + report path (EN + हिंदी)', () => {
+    const pol = read('src/pages/Moderation.tsx');
+    expect(pol).toMatch(/published immediately/);
+    expect(pol).toMatch(/primary moderator/);
+    expect(pol).toMatch(/तुरंत प्रकाशित होता है/);
   });
 });
 

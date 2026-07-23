@@ -10,7 +10,7 @@ import { supabase } from '../lib/supabase';
 import type { FeedItem } from '../lib/types';
 
 const REJECT_REASONS = [
-  'doxxing', 'violence', 'targeting', 'sexual', 'minor', 'misinfo', 'offtopic', 'duplicate', 'other',
+  'doxxing', 'violence', 'targeting', 'sexual', 'minor', 'personal', 'misinfo', 'offtopic', 'duplicate', 'other',
 ] as const;
 
 /**
@@ -22,8 +22,13 @@ export default function Admin() {
   const { stands, standStates, standOfTheDayId } = useStands();
   const { t, lang } = useI18n();
   const [items, setItems] = useState<FeedItem[]>([]);
+  const [approved, setApproved] = useState<FeedItem[]>([]);
   const [state, setState] = useState<'loading' | 'ok' | 'denied'>('loading');
   const [busyId, setBusyId] = useState<string | null>(null);
+  /** Per-item relevance affirmation — required before an item can be approved. */
+  const [affirmed, setAffirmed] = useState<Set<string>>(new Set());
+  /** Per-item issue/state corrections a reviewer makes before approving. */
+  const [corrections, setCorrections] = useState<Record<string, { issue: string; state: string | null }>>({});
 
   const [title, setTitle] = useState('');
   const [titleHi, setTitleHi] = useState('');
@@ -42,6 +47,9 @@ export default function Admin() {
     }
     const data = (await res.json()) as { items?: FeedItem[] };
     setItems(data.items ?? []);
+    const appRes = await callFeedFn('feed-moderate', { action: 'list_approved' }, session.access_token);
+    const appData = (await appRes.json()) as { items?: FeedItem[] };
+    setApproved(appData.items ?? []);
     setState('ok');
   }, [session]);
 
@@ -67,6 +75,33 @@ export default function Admin() {
     } finally {
       setBusyId(null);
     }
+  };
+
+  const setCorrection = (item: FeedItem, patch: { issue?: string; state?: string | null }) =>
+    setCorrections((prev) => ({
+      ...prev,
+      [item.id]: {
+        issue: patch.issue ?? prev[item.id]?.issue ?? item.issue,
+        state: patch.state !== undefined ? patch.state : prev[item.id]?.state ?? item.state,
+      },
+    }));
+
+  const toggleAffirm = (id: string, on: boolean) =>
+    setAffirmed((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+
+  const approveItem = async (item: FeedItem) => {
+    const c = corrections[item.id];
+    await act(item, 'approve', {
+      issue: c?.issue ?? item.issue,
+      state: c?.state ?? item.state,
+      relevant: true, // gated by the affirmation checkbox in the UI
+    });
+    toggleAffirm(item.id, false);
   };
 
   const createStand = async () => {
@@ -198,8 +233,8 @@ export default function Admin() {
 
       <div className="grid grid-cols-2 gap-2">
         <select
-          defaultValue={item.issue}
-          onChange={(e) => void act(item, 'approve', { issue: e.target.value, state: item.state })}
+          value={corrections[item.id]?.issue ?? item.issue}
+          onChange={(e) => setCorrection(item, { issue: e.target.value })}
           className="rounded-xl border border-line bg-faint px-3 py-2 text-sm"
           aria-label="issue"
         >
@@ -210,8 +245,8 @@ export default function Admin() {
           ))}
         </select>
         <select
-          defaultValue={item.state ?? ''}
-          onChange={(e) => void act(item, 'approve', { issue: item.issue, state: e.target.value || null })}
+          value={corrections[item.id]?.state ?? item.state ?? ''}
+          onChange={(e) => setCorrection(item, { state: e.target.value || null })}
           className="rounded-xl border border-line bg-faint px-3 py-2 text-sm"
           aria-label="state"
         >
@@ -224,11 +259,23 @@ export default function Admin() {
         </select>
       </div>
 
+      {/* Relevance is a required approval criterion. */}
+      <label className="flex items-start gap-2 text-sm cursor-pointer">
+        <input
+          type="checkbox"
+          checked={affirmed.has(item.id)}
+          onChange={(e) => toggleAffirm(item.id, e.target.checked)}
+          className="mt-0.5 w-4 h-4 accent-[#15305E]"
+        />
+        <span>{t('mod.relevanceAffirm')}</span>
+      </label>
+
       <div className="flex flex-wrap gap-2 pt-1">
         <button
           className="btn-primary text-sm !py-2 !px-4"
-          disabled={busyId === item.id}
-          onClick={() => void act(item, 'approve', { issue: item.issue, state: item.state })}
+          disabled={busyId === item.id || !affirmed.has(item.id)}
+          title={affirmed.has(item.id) ? '' : t('mod.relevanceRequired')}
+          onClick={() => void approveItem(item)}
         >
           {t('mod.approve')}
         </button>
@@ -241,7 +288,7 @@ export default function Admin() {
         </button>
         <select
           className="rounded-full border border-line bg-white px-3 py-2 text-sm text-sub"
-          defaultValue=""
+          value=""
           disabled={busyId === item.id}
           onChange={(e) => e.target.value && void act(item, 'reject', { reason: e.target.value })}
           aria-label={t('mod.reason')}
@@ -254,6 +301,40 @@ export default function Admin() {
           ))}
         </select>
       </div>
+    </article>
+  );
+
+  const renderApproved = (item: FeedItem) => (
+    <article key={item.id} className="card p-4 space-y-2">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="font-mono text-sub">{PLATFORM_LABEL[item.platform]}</span>
+        <span className="rounded-full bg-navy/5 text-navy px-2 py-0.5 font-semibold">
+          {issueLabel(item.issue, lang)}
+        </span>
+        {item.state && (
+          <span className="rounded-full bg-faint border border-line text-sub px-2 py-0.5">
+            {stateName(item.state, lang)}
+          </span>
+        )}
+      </div>
+      {item.title && <p className="text-sm font-medium">{item.title}</p>}
+      <a href={item.url} target="_blank" rel="noreferrer noopener" className="text-xs text-navy underline break-all">
+        {item.url}
+      </a>
+      <select
+        className="rounded-full border border-line bg-white px-3 py-2 text-sm text-sub"
+        value=""
+        disabled={busyId === item.id}
+        onChange={(e) => e.target.value && void act(item, 'remove', { reason: e.target.value })}
+        aria-label={t('mod.remove')}
+      >
+        <option value="">{t('mod.remove')}…</option>
+        {REJECT_REASONS.map((r) => (
+          <option key={r} value={r}>
+            {t(`policy.reason.${r}` as 'policy.title')}
+          </option>
+        ))}
+      </select>
     </article>
   );
 
@@ -358,10 +439,9 @@ export default function Admin() {
 
       {state === 'loading' ? (
         <p className="text-sub">{t('misc.loading')}</p>
-      ) : items.length === 0 ? (
-        <p className="text-sub">{t('mod.none')}</p>
       ) : (
         <>
+          {items.length === 0 && <p className="text-sub">{t('mod.none')}</p>}
           {reReview.length > 0 && (
             <section className="space-y-3" aria-label={t('mod.sectionReReview')}>
               <h2 className="font-display font-semibold text-lg text-navy">
@@ -378,6 +458,14 @@ export default function Admin() {
                 </h2>
               )}
               {rest.map(renderItem)}
+            </section>
+          )}
+          {approved.length > 0 && (
+            <section className="space-y-3" aria-label={t('mod.sectionApproved')}>
+              <h2 className="font-display font-semibold text-lg text-navy">
+                {t('mod.sectionApproved')}
+              </h2>
+              {approved.map(renderApproved)}
             </section>
           )}
         </>
