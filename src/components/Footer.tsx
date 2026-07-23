@@ -62,6 +62,9 @@ export function Footer() {
           <Link to="/data-rights" className="hover:underline underline-offset-4">
             {t('footer.data')}
           </Link>
+          <Link to="/privacy" className="hover:underline underline-offset-4">
+            Privacy policy
+          </Link>
           <Link to="/ledger" className="hover:underline underline-offset-4">
             {t('plog.title')}
           </Link>

@@ -56,8 +56,8 @@ export default function Moderation() {
         <h1 className="font-display font-bold text-3xl text-navy">{t('policy.title')}</h1>
         <p className="mt-3 text-sub">
           {hi
-            ? 'अभी सबमिशन तुरंत सार्वजनिक साक्ष्य में जाते हैं। रिपोर्ट पर पोस्ट छिप जाता है; झंडे लगे आइटम /admin में दिखते हैं। मानव-पूर्व-प्रकाशन वापस लाया जा सकता है।'
-            : 'Right now submissions go live as public evidence immediately. A report hides the item; flagged items surface in /admin. Human-before-public can be restored.'}
+            ? 'सार्वजनिक प्लेटफ़ॉर्म की सुरक्षा व्यवस्था पहली जाँच है, इसलिए मान्य लिंक तुरंत सार्वजनिक होते हैं। स्वचालित समीक्षा हर दिन साक्ष्य जाँचती है और नियम तोड़ने या स्पष्ट रूप से गलत सामग्री हटाती है। रिपोर्ट पर पोस्ट समीक्षा पूरी होने तक छिप जाता है।'
+            : 'Source platforms provide the first layer of content enforcement, so valid links are published immediately. An automated review audits evidence daily and removes links that are clearly wrong or break these rules. A report hides an item until review is complete.'}
         </p>
       </header>
 
@@ -97,8 +97,8 @@ export default function Moderation() {
         </h2>
         <p className="text-sub">
           {hi
-            ? 'हर पोस्ट पर “रिपोर्ट करें” बटन है - खाते की ज़रूरत नहीं। रिपोर्ट होते ही वह सार्वजनिक फ़ीड से हट जाता है और दोबारा जाँच के बाद ही लौटता है।'
-            : 'Every item has a Report button - no account needed. A reported item leaves the public feed immediately and only returns after a human re-reviews it.'}
+            ? 'हर पोस्ट पर “रिपोर्ट करें” बटन है। खाते की ज़रूरत नहीं। रिपोर्ट होते ही वह सार्वजनिक फ़ीड से हट जाता है और समीक्षा पूरी होने पर ही लौट सकता है।'
+            : 'Every item has a Report button. No account is needed. A reported item leaves the public feed immediately and can return only after review is complete.'}
         </p>
       </section>
 

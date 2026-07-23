@@ -41,10 +41,10 @@ const isLocalHost =
  */
 export const configError: boolean = !isLive && import.meta.env.PROD && !isLocalHost;
 
-/** Canonical public site URL (OG, docs). OAuth redirectTo uses window.location.origin. */
+/** Canonical public site URL. OAuth redirectTo uses window.location.origin. */
 export const SITE_URL: string =
   (import.meta.env.VITE_SITE_URL as string | undefined) ||
-  (typeof window !== 'undefined' ? window.location.origin : 'https://bharatbol.bharat-dudeja13.workers.dev');
+  (typeof window !== 'undefined' ? window.location.origin : 'https://bharatbol.vercel.app');
 
 export const REPO_URL: string =
   (import.meta.env.VITE_REPO_URL as string | undefined) || 'https://github.com/bharatdudeja13-cmd/BharatBol';

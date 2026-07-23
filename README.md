@@ -1,81 +1,66 @@
-# BharatBol — Bharat, speak. <img src="public/icons/icon.svg" width="28" align="top" alt="">
+# BharatBol: Bharat, speak. <img src="public/icons/icon.svg" width="28" align="top" alt="">
 
-**BharatBol** (भारत बोल — “Bharat, speak”) is a mobile-first, installable PWA: a strictly **non-partisan
-national civic square** where any Indian citizen — whatever party they support, or none — can
-publicly **stand** on an issue and be counted, verifiably and in the open.
+**BharatBol** (भारत बोल, “Bharat, speak”) is a mobile-first, installable PWA for people to follow civic issues, share public evidence links, and take a public stand on an issue. It is independent, non-partisan, and not affiliated with a government, party, or election authority.
 
-> **The one promise: prove how many. Never show who.**
+> **Public counts. Private identities.**
 
-BharatBol is an independent, non-partisan civic platform. It is not affiliated with any government,
-party, or election authority. Counts reflect public sentiment and **are not an election**.
-
----
+Counts reflect activity on BharatBol. They are not a census, survey, or election result.
 
 ## Features
 
-- **Live national counter** — “N citizens standing”, with per-stand “+N today” momentum, updated
-  in realtime for every visitor.
-- **Stands** — neutral, issue-framed causes with live counts, state-wise breakdowns, and a
-  supporter wall.
-- **One-tap join** — Google sign-in, one stand per account (DB-enforced), revocable any time.
-- **Supporter wall** — opt-in, first name + state only (“Aarti · Maharashtra”).
-- **India tilegram** — 9×9 rounded-tile map shaded by standing intensity; tap a state for its counts.
-- **Shareable proof card & citizen card** — rendered client-side on `<canvas>`, shared via the
-  Web Share API or downloaded as PNG.
-- **EN / हिंदी** scaffold, PWA install, reduced-motion support, visible focus states.
-- **Issue feed** — citizens submit public posts (Web Share Target when installed, paste
-  anywhere incl. iOS); a human moderates before anything is visible; the feed browses by issue
-  and state and routes back to the matching Stand. Link + embed only, never re-hosted.
-- **Demo mode** — with no Supabase env configured, the app runs on local sample data so anyone
-  can audit the UI (localhost only; a deployed build with missing config fails visibly).
+- **Live counts:** per-stand totals, daily movement, state breakdowns, and a national total update in real time.
+- **Account-backed stands:** Google sign-in enforces one stand per account per issue. A person can withdraw a stand or delete their account.
+- **Supporter wall:** first name and state are public only when the person opts in.
+- **Public ledger:** each stand or withdrawal adds an identity-free event to `stand_pulse`. The ledger can be downloaded, recounted, and checked against signed Rekor checkpoints.
+- **Issue feed:** citizens submit public Instagram, YouTube, and X links. Links are published immediately, remain on the original platform, and are never re-hosted.
+- **Evidence review:** source platforms provide the first layer of content enforcement. BharatBol's automated review audits evidence daily and removes links that are clearly wrong or break its rules. Anyone can also report a link, which removes it from the public feed until review is complete.
+- **Privacy controls:** the feed never identifies a submitter. Account-linked profile, stand, reaction, and submission records can be deleted from the profile page.
+- **PWA:** share-target support, install support, English and Hindi, reduced-motion support, and visible keyboard focus states.
 
 ## Stack
 
-Vite + React + TypeScript + Tailwind · Supabase (Postgres, Google Auth, Realtime, RLS) ·
-Cloudflare Pages. Total hosting cost: ₹0.
+Vite, React, TypeScript, Tailwind, Supabase, and Vercel. Cloudflare Worker support remains available for the alternate deployment.
 
-## The trust-critical paths (read these first)
+## Current data model
 
-The whole product rests on a few small pieces. If you audit anything, audit these:
+The live application uses account-linked stands and reactions. The private database can associate a signed-in account with its stands and reactions; public pages show counts only unless a person opts into the supporter wall. This is the current product model and is described in the [privacy policy](https://bharatbol.vercel.app/privacy).
 
-| Path | What it guarantees |
+The public ledger is separate from those account records. It exposes only `id`, `stand_id`, `delta`, and timestamp from `stand_pulse`, never an account identifier. Signed checkpoints make changes to the published ledger detectable. The ledger proves the published event sequence and totals; it does not prove that BharatBol represents all citizens.
+
+## Trust-critical paths
+
+| Path | Purpose |
 | --- | --- |
-| [`supabase/phase2_privacy.sql`](supabase/phase2_privacy.sql) | The privacy model. Stands are recorded as **anonymous ballots**: the `ballots` table has no user column and no FK to `auth.users`; dedup comes from a unique nullifier, not identity. The registrar's `token_issuance` ledger (RLS, zero policies, zero grants) records only that an account was issued blind tokens **for every live stand at once** — it carries no preference signal. The wall is voluntary publicity, account-linked *by consent* so it stays editable and erasable. |
-| [`docs/privacy-architecture.md`](docs/privacy-architecture.md) | The full design in plain language: RFC 9474 blind signatures, why each promise holds, and the residual risks stated honestly (platform log timing/IP correlation; two-operator split is the roadmap fix). |
-| [`supabase/functions/`](supabase/functions/) | `registrar-issue` (authed; blind-signs; never touches ballots) · `ballot-cast` / `ballot-withdraw` (unauthenticated; verify the blind signature; nullifier dedup). Identity and ballots never meet in one process. |
-| [`tests/unlinkability.test.ts`](tests/unlinkability.test.ts) | **The acceptance gate**: automated assertions that no query path yields account↔ballot, the registrar ledger is sealed, erasure cascades, and a simulated curious registrar fails to link receipts to accounts. Run with `npm test`. |
-| [`src/lib/blind.ts`](src/lib/blind.ts) + [`src/state/StandsProvider.tsx`](src/state/StandsProvider.tsx) | Client protocol: blind → issue → finalize → cast **without a user JWT**. Receipts (the only proof of your own ballots) live in the browser, exportable/importable from the profile page. |
-| [`src/lib/cards.ts`](src/lib/cards.ts) | Share cards are drawn entirely client-side; nothing is uploaded. |
-| [`docs/content-feed-design.md`](docs/content-feed-design.md) + [`supabase/phase4_feed.sql`](supabase/phase4_feed.sql) | The feed's privacy shape, stated plainly: `feed_items` has no submitter column, the account↔submission ledger is sealed (anti-abuse/takedown only), only human-approved items are publicly readable, and no media is ever re-hosted. Enforced by `tests/feed-privacy.test.ts`. Ballot unlinkability is untouched. |
-| [`supabase/phase2b_public_log.sql`](supabase/phase2b_public_log.sql) + [`checkpoints/`](checkpoints/) | Tamper-evidence: every cast/withdrawal is mirrored into an append-only, anonymous public log; scheduled Merkle roots over it are committed to this repo. `scripts/recount.mjs` lets anyone reproduce every displayed number from the public log; `scripts/prove-inclusion.mjs` lets a citizen prove their own anonymous ballot is counted. Tamper-evident, not tamper-proof — and we say so. |
+| [`supabase/phase6_account_stands.sql`](supabase/phase6_account_stands.sql) | Live account-linked stands and reactions, RLS, public aggregate views, and live pulse events. |
+| [`supabase/phase7_geography.sql`](supabase/phase7_geography.sql) | Public count aggregates, stand geography, and feed geography. |
+| [`supabase/functions/feed-submit/index.ts`](supabase/functions/feed-submit/index.ts) | URL validation, privacy-tag stripping, deduplication, rate limiting, metadata lookup, and immediate publication. |
+| [`supabase/functions/feed-report/index.ts`](supabase/functions/feed-report/index.ts) | Open reporting route that pulls a reported item from the public feed for review. |
+| [`src/pages/Ledger.tsx`](src/pages/Ledger.tsx) | Public ledger, downloadable event log, browser-side recount, and checkpoint comparison. |
+| [`scripts/recount-ledger.mjs`](scripts/recount-ledger.mjs) | Recounts the live public ledger and checks signed checkpoints. |
+| [`docs/privacy-architecture.md`](docs/privacy-architecture.md) | Current privacy, account deletion, and public-ledger model. |
+| [`docs/content-feed-design.md`](docs/content-feed-design.md) | Current feed publication, review, and removal policy. |
 
-**Honest limits** (also on the About page): the database stores no account↔stand link — that is
-now enforced by schema and tests, and it is why the national headline counts *stands taken*
-(distinct citizens across stands is uncomputable, by design). Infrastructure request logs could
-in principle correlate by timing/IP; running registrar and ballot store under separate operators
-is the real fix and is on the roadmap. Losing your browser's receipts means nobody — including
-us — can withdraw or link your anonymous ballots.
+## Guardrails
 
-## Guardrails (non-negotiable)
-
-1. **Issue-framed, never person-framed.** No stand targets an individual, party, company, or community.
-2. **Strictly non-partisan** — in copy, seed data, and moderation.
-3. **Not an election.** The disclaimer is permanently visible in the footer of every page.
-4. **Honest counts** — labelled “verified engaged citizens”, never a census.
-5. **Measures sentiment, never instructs action.**
+1. Every stand is issue-framed, never person-framed.
+2. BharatBol does not favour or attack any party.
+3. Evidence links are unverified and point to the original source.
+4. Content that identifies people, shows graphic violence, targets people or communities, exploits minors, contains sexual content, is clearly false, or is off-topic may be removed.
+5. The service measures sentiment and does not instruct action.
 
 ## Local development
 
 ```bash
 npm install
-npm run dev          # demo mode: sample data, no backend needed
+npm run dev
 ```
 
-## Going live
+Without Supabase variables, demo data is available only on localhost. Production builds require real Supabase build variables.
 
-Operator setup (Supabase, registrar keys, Edge Functions, Cloudflare Pages) lives in
-[docs/DEPLOY.md](docs/DEPLOY.md).
+## Deployment
+
+Vercel is the primary deployment. Set `VITE_SITE_URL=https://bharatbol.vercel.app` and configure the Supabase and Google OAuth values in [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## License
 
-[MIT](LICENSE). BharatBol is open source so its promises can be verified, not merely believed.
+[MIT](LICENSE)
