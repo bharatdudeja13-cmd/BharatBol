@@ -5,8 +5,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 /**
  * Fail the production build when Supabase is not configured.
  *
- * VITE_* values are inlined by Vite at build time - Cloudflare *runtime*
- * Worker bindings / wrangler `vars` do not reach the client bundle. A missing
+ * VITE_* values are inlined by Vite at build time. Hosting runtime bindings
+ * do not reach the client bundle. A missing
  * Build variable used to ship a silent "Configuration error" page; this gate
  * refuses to produce that bundle at all.
  *
@@ -25,10 +25,10 @@ function assertSupabaseBuildEnv(): Plugin {
       throw new Error(
         [
           `Production build refused: missing ${missing.join(', ')}.`,
-          'Set them as Cloudflare Workers Builds → Variables → Build variables',
-          '(not runtime bindings / wrangler vars), on both Production and Preview,',
+          'Set them as Vercel build environment variables',
+          'on both Production and Preview,',
           'then trigger a fresh deployment. Adding a variable does not rebuild.',
-          'See docs/DEPLOY.md §2–§3.',
+          'See docs/DEPLOY.md.',
         ].join(' '),
       );
     },

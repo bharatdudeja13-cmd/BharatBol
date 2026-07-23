@@ -6,3 +6,4 @@ dist
 *.local
 .registrar-private.local.jwk
 supabase/.temp
+.ledger-signing-key.local.pem

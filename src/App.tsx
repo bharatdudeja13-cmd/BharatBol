@@ -16,7 +16,8 @@ import StandDetail from './pages/StandDetail';
 import Me from './pages/Me';
 import About from './pages/About';
 import DataRights from './pages/DataRights';
-import Verify from './pages/Verify';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import Ledger from './pages/Ledger';
 import Feed from './pages/Feed';
 import AddToFeed from './pages/AddToFeed';
 import Moderation from './pages/Moderation';
@@ -94,7 +95,10 @@ function Shell() {
             <Route path="/me" element={<Me />} />
             <Route path="/about" element={<About />} />
             <Route path="/data-rights" element={<DataRights />} />
-            <Route path="/verify" element={<Verify />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/ledger" element={<Ledger />} />
+            {/* Verify-the-count is replaced by the public ledger. */}
+            <Route path="/verify" element={<Ledger />} />
             <Route path="/feed" element={<Feed />} />
             <Route path="/add" element={<AddToFeed />} />
             <Route path="/evidence" element={<EvidenceRedirect />} />

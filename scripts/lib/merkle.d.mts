@@ -7,8 +7,10 @@ export type LogEvent = {
   state: string | null;
   event_on: string;
 };
-export function canonicalEvent(e: LogEvent): string;
-export function merkleRoot(events: LogEvent[], size?: number): Promise<string>;
+/** A caller may supply its own leaf encoding via __canon (the stand ledger). */
+export type Leaf = LogEvent | { __canon: string };
+export function canonicalEvent(e: Leaf): string;
+export function merkleRoot(events: Leaf[], size?: number): Promise<string>;
 export function inclusionProof(events: LogEvent[], index: number, size?: number): Promise<string[]>;
 export function verifyInclusion(
   event: LogEvent,
