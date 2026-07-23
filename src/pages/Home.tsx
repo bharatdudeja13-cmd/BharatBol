@@ -47,16 +47,14 @@ export default function Home() {
   /** Added today is a subset of open stands (same live set). */
   const addedTodayCount = Math.min(addedToday.length, openTotal);
 
-  /** Tagged to this state first, then All India (untagged). Never other states only. */
+  /** Only stands tagged to this state - not All India, not other states. */
   const openStands = useMemo(() => {
     if (!selState) return [];
-    const tagged = stands.filter((s) => (standStates[s.id] ?? []).includes(selState));
-    const nationalOnly = stands.filter((s) => (standStates[s.id] ?? []).length === 0);
     const score = (id: string) =>
       breakdown.find((r) => r.stand_id === id && r.state === selState)?.count ?? 0;
-    const byStanding = (a: (typeof stands)[0], b: (typeof stands)[0]) =>
-      score(b.id) - score(a.id);
-    return [...tagged.sort(byStanding), ...nationalOnly.sort(byStanding)];
+    return stands
+      .filter((s) => (standStates[s.id] ?? []).includes(selState))
+      .sort((a, b) => score(b.id) - score(a.id));
   }, [stands, standStates, breakdown, selState]);
 
   const featured = useMemo(
@@ -204,29 +202,21 @@ export default function Home() {
                 <p className="text-sm text-sub">{t('map.noData')}</p>
               ) : (
                 <ul className="divide-y divide-line">
-                  {openStands.map((stand) => {
-                    const especially = (standStates[stand.id] ?? []).includes(selState);
-                    return (
-                      <li key={stand.id}>
-                        <Link
-                          to={`/stand/${stand.id}`}
-                          className="flex items-center justify-between gap-4 py-3.5 min-h-12 hover:text-navy"
-                        >
-                          <span className="text-sm font-medium">
-                            {lang === 'hi' && stand.title_hi ? stand.title_hi : stand.title}
-                            {especially && (
-                              <span className="ml-2 text-[10px] font-mono uppercase tracking-wide text-saffron">
-                                {t('map.especially')}
-                              </span>
-                            )}
-                          </span>
-                          <span className="font-mono text-sm text-navy tabular-nums shrink-0">
-                            {fmt(localCount(stand.id))}
-                          </span>
-                        </Link>
-                      </li>
-                    );
-                  })}
+                  {openStands.map((stand) => (
+                    <li key={stand.id}>
+                      <Link
+                        to={`/stand/${stand.id}`}
+                        className="flex items-center justify-between gap-4 py-3.5 min-h-12 hover:text-navy"
+                      >
+                        <span className="text-sm font-medium">
+                          {lang === 'hi' && stand.title_hi ? stand.title_hi : stand.title}
+                        </span>
+                        <span className="font-mono text-sm text-navy tabular-nums shrink-0">
+                          {fmt(localCount(stand.id))}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
                 </ul>
               )}
             </div>
