@@ -12,8 +12,8 @@ export default function Moderation() {
 
   const RULES: [string, string][] = [
     [
-      'Must be about a civic issue',
-      'Every submission must clearly relate to a public civic issue. Content centred on a private individual, personal or lifestyle content (daily life, travel, fitness, dance, food), and appearance-focused content is not accepted — a moderator must affirm relevance to the tagged issue before anything is published.',
+      'Please keep it civic',
+      'BharatBol is for public civic issues. Everything you submit is published immediately, and the platform it comes from (Instagram, YouTube, X, …) is the primary moderator — we only link and embed, never re-host. Please do not submit purely personal, lifestyle, or appearance-focused content. If something does not belong, anyone can report it and it is hidden for a moderator to review.',
     ],
     [
       'Identifying anyone',
@@ -32,8 +32,8 @@ export default function Moderation() {
 
   const RULES_HI: [string, string][] = [
     [
-      'किसी नागरिक मुद्दे से जुड़ा हो',
-      'हर प्रविष्टि किसी सार्वजनिक नागरिक मुद्दे से स्पष्ट रूप से संबंधित होनी चाहिए। किसी निजी व्यक्ति पर केंद्रित सामग्री, व्यक्तिगत या जीवनशैली सामग्री (रोज़मर्रा की ज़िंदगी, यात्रा, फ़िटनेस, नृत्य, खान-पान) और दिखावट-केंद्रित सामग्री स्वीकार नहीं की जाती — प्रकाशन से पहले एक समीक्षक को चिह्नित मुद्दे से प्रासंगिकता की पुष्टि करनी होती है।',
+      'कृपया इसे नागरिक रखें',
+      'भारत बोल सार्वजनिक नागरिक मुद्दों के लिए है। आप जो भी भेजते हैं वह तुरंत प्रकाशित होता है, और जिस मंच से वह आता है (Instagram, YouTube, X, …) वही प्राथमिक मॉडरेटर है — हम केवल लिंक और एम्बेड करते हैं, कभी दोबारा होस्ट नहीं। कृपया विशुद्ध व्यक्तिगत, जीवनशैली या दिखावट-केंद्रित सामग्री न भेजें। यदि कुछ उपयुक्त न हो, तो कोई भी उसकी रिपोर्ट कर सकता है और वह समीक्षा के लिए छिपा दी जाती है।',
     ],
     [
       'किसी की पहचान उजागर करना',

@@ -70,11 +70,13 @@ describe('publishing path (relevance-gated auto-approve)', () => {
     expect(policies[0]).toMatch(/for select using \(status = 'approved'\)/);
   });
 
-  it('feed-submit routes flagged content to pending, clean content to approved', () => {
+  it('feed-submit publishes everything; the pre-screen only flags for optional review', () => {
     const src = read('supabase/functions/feed-submit/index.ts');
-    // Relevance is now an approval criterion: flagged (safety OR
-    // likely-irrelevant/personal) → pending; only clean → approved.
-    expect(src).toMatch(/const status = flagged \? 'pending' : 'approved'/);
+    // Owner decision: source platform is the primary moderator; everything
+    // a citizen submits publishes immediately. The pre-screen sets `flagged`
+    // (admin signal) but never gates publication.
+    expect(src).toMatch(/const status = 'approved'/);
+    expect(src).not.toMatch(/flagged \? 'pending'/);
     expect(src).toMatch(/RELEVANCE_PRESCREEN/);
     expect(src).not.toMatch(/status:\s*'rejected'/);
   });
@@ -108,46 +110,42 @@ describe('publishing path (relevance-gated auto-approve)', () => {
   });
 });
 
-describe('relevance is a required approval criterion (Task 5)', () => {
+describe('reactive relevance moderation (Task 5, publish-everything posture)', () => {
   const submit = read('supabase/functions/feed-submit/index.ts');
   const moderate = read('supabase/functions/feed-moderate/index.ts');
   const admin = read('src/pages/Admin.tsx');
 
-  it('the pre-screen flags likely personal / lifestyle / appearance content', () => {
+  it('the pre-screen flags likely personal / lifestyle / appearance content for review', () => {
     for (const w of ['gym', 'selfie', 'vlog', 'makeup', 'wedding', 'tourist']) {
       expect(submit).toMatch(new RegExp(`'${w}'`));
     }
   });
 
-  it('approve is refused without an explicit relevance affirmation', () => {
+  it('restoring a reported item still requires an explicit relevance affirmation', () => {
     expect(moderate).toMatch(/body\.relevant !== true/);
     expect(moderate).toMatch(/affirm relevance/i);
-  });
-
-  it("the admin UI gates approve behind a relevance checkbox and sends relevant:true", () => {
     expect(admin).toMatch(/affirmed\.has\(item\.id\)/);
     expect(admin).toMatch(/relevant: true/);
-    expect(admin).toMatch(/mod\.relevanceAffirm/);
   });
 
-  it('moderators can remove already-approved items (list_approved + remove)', () => {
+  it('moderators can remove already-published items (list_approved + remove)', () => {
     expect(moderate).toMatch(/action === 'list_approved'/);
     expect(moderate).toMatch(/action === 'remove'/);
     expect(admin).toMatch(/'remove'/);
     expect(admin).toMatch(/mod\.sectionApproved/);
   });
 
-  it("'personal' and off-topic are reject reasons in schema, function and UI", () => {
+  it("'personal' is a reject reason in schema, function and UI", () => {
     expect(read('supabase/phase8_moderation_relevance.sql')).toMatch(/'personal'/);
     expect(moderate).toMatch(/'personal'/);
     expect(admin).toMatch(/'personal'/);
   });
 
-  it('the published policy requires relevance to a civic issue (EN + हिंदी)', () => {
+  it('the policy is honest about publish-everything + platform-first + report path (EN + हिंदी)', () => {
     const pol = read('src/pages/Moderation.tsx');
-    expect(pol).toMatch(/Must be about a civic issue/);
-    expect(pol).toMatch(/नागरिक मुद्दे से जुड़ा हो/);
-    expect(pol).toMatch(/appearance-focused/);
+    expect(pol).toMatch(/published immediately/);
+    expect(pol).toMatch(/primary moderator/);
+    expect(pol).toMatch(/तुरंत प्रकाशित होता है/);
   });
 });
 

@@ -189,15 +189,17 @@ Deno.serve(async (req) => {
 
   const meta = await fetchMeta(parsed.platform, parsed.canon, parsed.id);
   const haystack = `${meta.title ?? ''} ${meta.author_name ?? ''}`.toLowerCase();
+  // The source platform (Instagram/YouTube/X/…) is the primary content
+  // moderator; BharatBol only links + embeds, never re-hosts. Per owner
+  // decision, everything a citizen submits publishes immediately. The
+  // pre-screen no longer gates publication — it only sets `flagged` so
+  // /admin can surface likely-personal / likely-unsafe items for OPTIONAL
+  // review. The §0.6 safety line stays REACTIVE: report → hides the item
+  // (feed-report), and a moderator can remove it (feed-moderate `remove`).
   const flagged =
     PRESCREEN.some((w) => haystack.includes(w)) ||
     RELEVANCE_PRESCREEN.some((w) => haystack.includes(w));
-
-  // Relevance is now an approval criterion. Clean items still auto-publish
-  // (the temporary auto-approve policy), but anything the pre-screen flags —
-  // safety OR likely-irrelevant/personal — lands as `pending`, so a human
-  // must affirm it relates to the tagged civic issue before it goes public.
-  const status = flagged ? 'pending' : 'approved';
+  const status = 'approved';
 
   const { data: item, error: insErr } = await admin
     .from('feed_items')
