@@ -126,10 +126,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(async () => {
     if (!supabase) return;
-    // Prefer the origin the user is actually on (custom domain or Pages).
-    // SITE_URL is a fallback for SSR-less edge cases. Both must be in
-    // Supabase Auth → Redirect URLs. Google consent "App name" is set in
-    // Google Cloud (not fixable in app code) — see docs/DEPLOY.md.
+    // Prefer the origin the user is actually on (Workers / custom domain).
+    // That origin must be listed under Supabase Auth → Redirect URLs.
+    // Google Cloud Authorized redirect URI must stay:
+    //   https://byfwdrazysblopnlahmx.supabase.co/auth/v1/callback
+    // (never put the Workers URL in Google’s redirect list).
+    // Consent "App name" = BharatBol is set in Google Cloud OAuth consent screen.
     const origin =
       typeof window !== 'undefined' ? window.location.origin : SITE_URL.replace(/\/$/, '');
     const path =

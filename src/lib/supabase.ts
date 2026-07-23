@@ -44,7 +44,7 @@ export const configError: boolean = !isLive && import.meta.env.PROD && !isLocalH
 /** Canonical public site URL (OG, docs). OAuth redirectTo uses window.location.origin. */
 export const SITE_URL: string =
   (import.meta.env.VITE_SITE_URL as string | undefined) ||
-  (typeof window !== 'undefined' ? window.location.origin : 'https://bharatbol.pages.dev');
+  (typeof window !== 'undefined' ? window.location.origin : 'https://bharatbol.bharat-dudeja13.workers.dev');
 
 export const REPO_URL: string =
   (import.meta.env.VITE_REPO_URL as string | undefined) || 'https://github.com/bharatdudeja13-cmd/BharatBol';
