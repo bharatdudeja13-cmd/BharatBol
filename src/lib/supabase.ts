@@ -41,10 +41,11 @@ const isLocalHost =
  */
 export const configError: boolean = !isLive && import.meta.env.PROD && !isLocalHost;
 
-/** Canonical public site URL. OAuth redirectTo uses window.location.origin. */
-export const SITE_URL: string =
-  (import.meta.env.VITE_SITE_URL as string | undefined) ||
-  (typeof window !== 'undefined' ? window.location.origin : 'https://bharatbol.vercel.app');
+/**
+ * Canonical public URL used on cards and in share links. OAuth return URLs
+ * still use window.location.origin so sign-in completes on the host visited.
+ */
+export const SITE_URL = 'https://bharatbol.vercel.app';
 
 export const REPO_URL: string =
   (import.meta.env.VITE_REPO_URL as string | undefined) || 'https://github.com/bharatdudeja13-cmd/BharatBol';
