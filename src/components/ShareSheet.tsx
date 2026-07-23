@@ -6,17 +6,7 @@ import { fmt } from '../lib/format';
 import { drawProofCard, shareCanvas, downloadCanvas, type CardFormat } from '../lib/cards';
 import { autoTag, hashtagBlock } from '../lib/campaign';
 import { SHARE_TEMPLATES, fillTemplate } from '../config/brand';
-import checkpointsRaw from '../../checkpoints/roots.jsonl?raw';
-
-type LedgerCheckpoint = { rekor_url?: string };
-
-const latestLedgerProofUrl = (() => {
-  const entries = String(checkpointsRaw)
-    .split('\n')
-    .filter((line) => line.trim())
-    .map((line) => JSON.parse(line) as LedgerCheckpoint);
-  return entries[entries.length - 1]?.rekor_url ?? null;
-})();
+import { standPath } from '../lib/standUrl';
 
 /**
  * The one-tap share package: card image (post or story format),
@@ -35,7 +25,7 @@ export function ShareSheet() {
 
   const count = shareFor ? counts[shareFor.id]?.total ?? 0 : 0;
   const title = shareFor ? (lang === 'hi' && shareFor.title_hi ? shareFor.title_hi : shareFor.title) : '';
-  const link = shareFor ? `${SITE_URL}/stand/${shareFor.id}` : SITE_URL;
+  const link = shareFor ? `${SITE_URL}${standPath(shareFor)}` : SITE_URL;
   const isJoined = shareFor ? joined.has(shareFor.id) : false;
 
   const vars = useMemo(
@@ -86,7 +76,10 @@ export function ShareSheet() {
   const filename = format === 'story' ? 'bharatbol-story.png' : 'bharatbol-stand.png';
 
   const doShare = async () => {
-    if (canvas && (await shareCanvas(canvas, caption, link))) return;
+    // Web Share adds `url` separately. Remove the same stand link from the
+    // text so recipients see one canonical link, not two.
+    const text = caption.replace(link, '').replace(/\s{2,}/g, ' ').trim();
+    if (canvas && (await shareCanvas(canvas, text, link))) return;
     if (canvas) downloadCanvas(canvas, filename);
   };
 
@@ -127,16 +120,12 @@ export function ShareSheet() {
         </div>
 
         <p className="font-mono text-sm font-semibold text-saffron">{hashtagBlock(shareFor)}</p>
-        {latestLedgerProofUrl && (
-          <a
-            href={latestLedgerProofUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex text-sm font-semibold text-navy underline underline-offset-4"
-          >
-            {t('share.publicRecord')} ↗
-          </a>
-        )}
+        <a
+          href={`${SITE_URL}/ledger`}
+          className="inline-flex text-sm font-semibold text-navy underline underline-offset-4"
+        >
+          {t('share.publicRecord')} →
+        </a>
 
         {/* Format toggle: feed post vs story/DP */}
         <div className="flex gap-2" role="radiogroup" aria-label="Card format">

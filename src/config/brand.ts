@@ -25,16 +25,16 @@ export const TAGLINES = {
  */
 export const SHARE_TEMPLATES = {
   whatsapp: {
-    en: 'This matters to me: {issue}. Have a look and decide for yourself: {link}',
-    hi: 'मेरे लिए यह मुद्दा मायने रखता है: {issue}। देखिए और अपना विचार बनाइए: {link}',
+    en: 'I spoke on BharatBol - {issue}. Your voice counts too 👉 {link} #BharatBol {tag}',
+    hi: 'मैंने BharatBol पर अपनी बात रखी - {issue}. तुम भी बोलो 👉 {link} #BharatBol {tag}',
   },
   x: {
-    en: '{issue} deserves a clear public count. See the issue and decide where you stand: {link} {tag}',
-    hi: '{issue} पर साफ़ सार्वजनिक गिनती होनी चाहिए। मुद्दा देखें और अपना पक्ष तय करें: {link} {tag}',
+    en: '{n} people said {issue} matters. Where do you stand? Bharat, bol. {link} #BharatBol {tag}',
+    hi: '{n} लोगों ने कहा - {issue} मायने रखता है। आप कहाँ खड़े हैं? भारत, बोल। {link} #BharatBol {tag}',
   },
   caption: {
-    en: 'I chose to stand on this: {issue}. The public count is here: {link} {tag}',
-    hi: 'मैंने इस मुद्दे पर पक्ष लिया है: {issue}। सार्वजनिक गिनती यहाँ है: {link} {tag}',
+    en: 'मैंने बोला। I spoke - {issue}. {n} voices and counting. Add yours 👉 {link} #BharatBol {tag}',
+    hi: 'मैंने बोला। - {issue}. {n} आवाज़ें, और बढ़ रही हैं। अपनी जोड़ें 👉 {link} #BharatBol {tag}',
   },
 } as const;
 

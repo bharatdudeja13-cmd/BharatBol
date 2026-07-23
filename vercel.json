@@ -1,5 +1,6 @@
 {
   "routes": [
+    { "src": "/api/ig-poster/([^/]+)", "dest": "/api/ig-poster?shortcode=$1" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]

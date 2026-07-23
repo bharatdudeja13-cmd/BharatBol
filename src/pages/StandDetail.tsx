@@ -17,15 +17,15 @@ export default function StandDetail() {
   const { stands, counts, wall, breakdown, joined, requestStand, withdraw, setShareFor, loading } =
     useStands();
   const { t, lang } = useI18n();
+  const stand = stands.find((s) => s.public_id === id || s.id === id);
+  const standId = stand?.id;
   const { record: publicLedger, status: ledgerStatus, refresh: refreshLedger } =
-    usePublicStandLedger(id);
-
-  const stand = stands.find((s) => s.id === id);
+    usePublicStandLedger(standId);
   const { items: evidence } = useEvidence({ issue: stand?.category, limit: 24, enabled: !!stand });
-  const standWall = useMemo(() => wall.filter((w) => w.stand_id === id), [wall, id]);
+  const standWall = useMemo(() => wall.filter((w) => w.stand_id === standId), [wall, standId]);
   const standStates = useMemo(
-    () => breakdown.filter((r) => r.stand_id === id).map((r) => ({ state: r.state, count: r.count })),
-    [breakdown, id]
+    () => breakdown.filter((r) => r.stand_id === standId).map((r) => ({ state: r.state, count: r.count })),
+    [breakdown, standId]
   );
 
   if (loading) {
@@ -74,6 +74,20 @@ export default function StandDetail() {
       <h1 className="mt-3 font-display font-bold text-3xl sm:text-4xl leading-tight text-ink">{title}</h1>
       <p className="mt-2 font-mono text-sm font-semibold text-saffron">{hashtagBlock(stand)}</p>
       <p className="mt-4 text-sub leading-relaxed">{desc}</p>
+      {stand.source_url && (
+        <p className="mt-4 rounded-xl border border-line bg-faint px-4 py-3 text-sm text-sub">
+          <span className="font-semibold text-navy">Evidence:</span>{' '}
+          <a
+            href={stand.source_url}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-navy underline underline-offset-4"
+          >
+            {stand.source_label || 'Published source'}
+          </a>
+          {stand.source_published_on ? ` · ${stand.source_published_on}` : ''}
+        </p>
+      )}
 
       {/* Big live counter + action */}
       <div className="card mt-8 p-6 sm:p-8 text-center">
