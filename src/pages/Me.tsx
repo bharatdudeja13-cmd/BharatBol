@@ -134,30 +134,38 @@ export default function Me() {
             <button
               className="btn-primary text-sm"
               onClick={() =>
-                cardCanvas &&
-                void shareCanvas(cardCanvas, `${name} ${t('citizen.standsWith')} - BharatBol`, SITE_URL).then(
-                  (ok) => !ok && downloadCanvas(cardCanvas, 'bharatbol-citizen-card.png')
-                )
+                void (async () => {
+                  if (!cardCanvas) return;
+                  const shared = await shareCanvas(
+                    cardCanvas,
+                    `${name} ${t('citizen.standsWith')} - BharatBol`,
+                    SITE_URL
+                  );
+                  if (!shared) await downloadCanvas(cardCanvas, 'bharatbol-citizen-card.png');
+                })()
               }
             >
               {t('share.button')}
             </button>
             <button
               className="btn-secondary text-sm"
-              onClick={() => cardCanvas && downloadCanvas(cardCanvas, 'bharatbol-citizen-card.png')}
+              onClick={() => cardCanvas && void downloadCanvas(cardCanvas, 'bharatbol-citizen-card.png')}
             >
               {t('share.download')}
             </button>
             <button
               className="btn-secondary text-sm"
               onClick={() =>
-                void drawCitizenCard({
-                  firstName: profile?.first_name || name,
-                  stateName: stateName(profile?.state, lang),
-                  titles: myStands.map((s) => s.title),
-                  url: SITE_URL,
-                  format: 'story',
-                }).then((c) => downloadCanvas(c, 'bharatbol-citizen-story.png'))
+                void (async () => {
+                  const c = await drawCitizenCard({
+                    firstName: profile?.first_name || name,
+                    stateName: stateName(profile?.state, lang),
+                    titles: myStands.map((s) => s.title),
+                    url: SITE_URL,
+                    format: 'story',
+                  });
+                  await downloadCanvas(c, 'bharatbol-citizen-story.png');
+                })()
               }
             >
               {t('share.formatStory')}

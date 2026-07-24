@@ -1,8 +1,18 @@
 /* BharatBol service worker — app-shell caching for a fast, installable PWA.
    Data (Supabase) is never cached here: counts must stay honest and live. */
-const SHELL = 'bharatbol-shell-v1';
-const RUNTIME = 'bharatbol-runtime-v1';
-const SHELL_URLS = ['/', '/manifest.webmanifest', '/icons/icon.svg'];
+// v2: manifest now references raster PNG icons (Android install requires
+// one) — bump so clients holding the old cached manifest.webmanifest pick
+// up the change instead of serving it cache-first forever.
+const SHELL = 'bharatbol-shell-v2';
+const RUNTIME = 'bharatbol-runtime-v2';
+const SHELL_URLS = [
+  '/',
+  '/manifest.webmanifest',
+  '/icons/icon.svg',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/icon-maskable-512.png',
+];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(SHELL).then((c) => c.addAll(SHELL_URLS)).then(() => self.skipWaiting()));

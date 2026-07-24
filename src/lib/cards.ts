@@ -283,9 +283,26 @@ export async function shareCanvas(canvas: HTMLCanvasElement, text: string, url: 
   return false;
 }
 
-export function downloadCanvas(canvas: HTMLCanvasElement, filename: string) {
+/**
+ * Download a rendered card as a PNG.
+ *
+ * Uses a Blob object URL rather than `canvas.toDataURL()`: a 1080×1350 (or
+ * ×1920) card easily produces a multi-megabyte data: URI, and Android
+ * Chrome silently refuses to download data: URIs past roughly 2 MB — the
+ * click does nothing, with no error anywhere. Blob URLs have no such
+ * ceiling. The anchor is also appended to the DOM before `.click()`: some
+ * Android WebViews ignore the `download` attribute on a detached element.
+ */
+export async function downloadCanvas(canvas: HTMLCanvasElement, filename: string): Promise<void> {
+  const blob = await canvasToBlob(canvas);
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = canvas.toDataURL('image/png');
+  a.href = url;
   a.download = filename;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
   a.click();
+  a.remove();
+  // Give the browser a moment to pick up the blob before revoking it.
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
