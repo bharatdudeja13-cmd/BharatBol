@@ -80,7 +80,7 @@ export function ShareSheet() {
     // text so recipients see one canonical link, not two.
     const text = caption.replace(link, '').replace(/\s{2,}/g, ' ').trim();
     if (canvas && (await shareCanvas(canvas, text, link))) return;
-    if (canvas) downloadCanvas(canvas, filename);
+    if (canvas) await downloadCanvas(canvas, filename);
   };
 
   const copyText = async (text: string, which: 'link' | 'caption' | 'insta') => {
@@ -92,7 +92,7 @@ export function ShareSheet() {
   const doInstagram = async () => {
     // Instagram has no web share intent: copy the caption, save the card.
     await copyText(caption, 'insta');
-    if (canvas) downloadCanvas(canvas, filename);
+    if (canvas) await downloadCanvas(canvas, filename);
   };
 
   const waText = fillTemplate(SHARE_TEMPLATES.whatsapp[copyLang], vars);
@@ -188,7 +188,7 @@ export function ShareSheet() {
           <button className="btn-secondary text-sm" onClick={() => void doInstagram()}>
             {copied === 'insta' ? '✓ ' + t('share.instagramHint') : t('share.instagram')}
           </button>
-          <button className="btn-secondary text-sm" onClick={() => canvas && downloadCanvas(canvas, filename)}>
+          <button className="btn-secondary text-sm" onClick={() => canvas && void downloadCanvas(canvas, filename)}>
             {t('share.download')}
           </button>
           <button className="btn-ghost text-sm" onClick={() => void copyText(caption, 'caption')}>
